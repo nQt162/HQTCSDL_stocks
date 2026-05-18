@@ -16,18 +16,21 @@ from vnstock.api.quote import Quote
 # CONFIG
 # =========================
 
-DATA_DIR = "./getData/data/data_clean"
+DATA_DIR = "ML/getData/data/data_clean"
 os.makedirs(DATA_DIR, exist_ok=True)
 
 OUTPUT_FILE = os.path.join(
     DATA_DIR,
     "Data_500_stocks_2015-2026.csv"
+    # "Data_500_stocks_01-17.csv"
 )
 
-SYMBOL_FILE = "./getData/symbol500.txt"
+SYMBOL_FILE = "ML/getData/symbol500.txt"
 
 SOURCE = "KBS"
 
+# START_DATE = "2026-05-01"
+# END_DATE = "2026-05-17"
 START_DATE = "2015-01-01"
 END_DATE = "2026-04-30"
 
