@@ -1,0 +1,6 @@
+insight_date,insight_type,source_model,symbol,sector,severity,metric_name,metric_value,title,message,created_at
+2026-05-20,model3,model3,,,info,adjusted_buy_count,0.0,Model3 BUY signal count,"Model3 has 0 strong BUY signals, 1 strong SELL signals, and 202 HOLD signals on 2026-05-20.",2026-06-03 08:51:02
+2026-05-20,model3,model3,HIO,Utilities,success,buy_probability,0.45985305,Top BUY probability,HIO has the highest BUY probability for Model3 on 2026-05-20.,2026-06-03 08:51:02
+2026-05-20,model3,model3,HKT,Food & Beverage,warning,sell_probability,0.60963607,Top SELL risk,HKT has the highest SELL probability for Model3 on 2026-05-20.,2026-06-03 08:51:02
+2026-05-20,model3,model3,,,info,accuracy,56.301749479872974,Model3 classification accuracy,Model3 test accuracy is 56.30%.,2026-06-03 08:51:02
+2026-05-20,model3,model3,,,success,cumulative_return_net,2.2338615837519815,Model3 backtest net return,Model3 top BUY backtest net cumulative return is 223.39%.,2026-06-03 08:51:02

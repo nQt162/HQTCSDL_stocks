@@ -10,6 +10,12 @@ from src.config import (
     BACKTEST_PATH,
     BACKTEST_METRICS_PATH,
     BACKTEST_SWEEP_PATH,
+    MART_MODEL3_TRADING_SIGNALS_PATH,
+    MART_MODEL3_SIGNAL_SUMMARY_PATH,
+    MART_MODEL3_BACKTEST_DAILY_PATH,
+    MART_MODEL3_METRICS_PATH,
+    MODEL3_DAILY_INSIGHTS_PATH,
+    SECTOR_LABEL_ENCODING_PATH,
     HORIZON,
     FEATURES,
     XGB_PARAMS,
@@ -45,6 +51,7 @@ from src.evaluate import (
     save_feature_importance,
 )
 from src.backtest import compute_top_k_backtest, run_backtest_sweep, save_backtest_metrics
+from src.mart import save_model3_marts
 
 
 def create_folders():
@@ -150,6 +157,20 @@ def main():
         model=model,
         features=final_features,
         path=FEATURE_IMPORTANCE_PATH
+    )
+
+    print("Saving model3 marts and insights...")
+    save_model3_marts(
+        predictions_df=result_df,
+        backtest_df=backtest_df,
+        metrics=metrics,
+        backtest_metrics=backtest_metrics,
+        trading_signals_path=MART_MODEL3_TRADING_SIGNALS_PATH,
+        signal_summary_path=MART_MODEL3_SIGNAL_SUMMARY_PATH,
+        backtest_daily_path=MART_MODEL3_BACKTEST_DAILY_PATH,
+        metrics_path=MART_MODEL3_METRICS_PATH,
+        daily_insights_path=MODEL3_DAILY_INSIGHTS_PATH,
+        sector_mapping_path=SECTOR_LABEL_ENCODING_PATH,
     )
 
     print("Done.")

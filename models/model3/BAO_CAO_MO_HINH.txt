@@ -300,6 +300,31 @@ Ket qua dau ra:
 - reports/backtest_sweep.csv
 - reports/feature_importance.csv
 - reports/model3_dashboard.html
+- reports/mart_model3_trading_signals.csv
+- reports/mart_model3_signal_summary.csv
+- reports/mart_model3_backtest_daily.csv
+- reports/mart_model3_metrics.csv
+- reports/model3_daily_insights.csv
+
+Bo sung mart/insights cho dashboard:
+
+- mart_model3_trading_signals: luu tin hieu predicted_signal, adjusted_signal va xac suat SELL/HOLD/BUY theo tung symbol/ngay.
+- mart_model3_signal_summary: tong hop so BUY/HOLD/SELL theo ngay va sector; encode_sector duoc giu de join voi bang mapping nganh.
+- mart_model3_backtest_daily: chuan hoa ket qua backtest theo ngay de dashboard doc truc tiep.
+- mart_model3_metrics: chuyen metrics.json va backtest_metrics.json thanh bang metric dang long-format.
+- model3_daily_insights: sinh insight co cau truc cho ngay moi nhat, gom so BUY/SELL manh, top BUY probability, top SELL risk, accuracy va net return.
+
+Ghi chu khoa chinh/khoa ngoai logic:
+
+- predictions.csv: PK logic (trading_date, symbol); FK logic toi stock.features_all(trading_date, symbol), stock.stock_symbols(symbol) va bang mapping nganh qua encode_sector neu co.
+- prediction_accuracy.csv: PK logic (date, symbol); FK logic toi predictions.csv(future_trading_date, symbol).
+- backtest.csv: PK logic trading_date; selected_symbols la danh sach chuoi nen neu can FK chuan thi tach thanh bang chi tiet (trading_date, symbol).
+- mart_model3_trading_signals.csv: PK logic (model_name, trading_date, symbol); FK logic toi stock.features_all, stock.stock_symbols va bang mapping nganh.
+- mart_model3_signal_summary.csv: PK logic (model_name, trading_date, sector); FK logic toi bang mapping nganh qua sector/encode_sector.
+- mart_model3_backtest_daily.csv: PK logic (model_name, trading_date); FK logic toi ngay giao dich trong stock.features_all.
+- mart_model3_metrics.csv: PK logic (model_name, metric_group, metric_name, created_at); FK logic toi bang danh muc model neu co.
+- model3_daily_insights.csv: PK logic (insight_date, insight_type, source_model, metric_name, symbol, sector); FK logic toi bang model, symbol va sector neu cac gia tri nay khac rong.
+- Chi tiet schema xem file MODEL3_SCHEMA.md.
 
 Dashboard hien tai gom:
 

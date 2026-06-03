@@ -16,6 +16,10 @@ CLICKHOUSE_SECURE = os.getenv("CLICKHOUSE_SECURE", "true").strip().lower() in {
     "true",
     "yes",
 }
+SECTOR_LABEL_ENCODING_PATH = os.getenv(
+    "SECTOR_LABEL_ENCODING_PATH",
+    "github_push/HQTCSDL_stocks/data/clean/sector_label_encoding.csv",
+)
 
 MODEL_PATH = "models/trading_signal_xgb_classifier.pkl"
 
@@ -26,6 +30,11 @@ FEATURE_IMPORTANCE_PATH = "reports/feature_importance.csv"
 BACKTEST_PATH = "reports/backtest.csv"
 BACKTEST_METRICS_PATH = "reports/backtest_metrics.json"
 BACKTEST_SWEEP_PATH = "reports/backtest_sweep.csv"
+MART_MODEL3_TRADING_SIGNALS_PATH = "reports/mart_model3_trading_signals.csv"
+MART_MODEL3_SIGNAL_SUMMARY_PATH = "reports/mart_model3_signal_summary.csv"
+MART_MODEL3_BACKTEST_DAILY_PATH = "reports/mart_model3_backtest_daily.csv"
+MART_MODEL3_METRICS_PATH = "reports/mart_model3_metrics.csv"
+MODEL3_DAILY_INSIGHTS_PATH = "reports/model3_daily_insights.csv"
 WALK_FORWARD_PREDICTION_PATH = "reports/walk_forward_predictions.csv"
 WALK_FORWARD_FOLD_METRICS_PATH = "reports/walk_forward_fold_metrics.csv"
 WALK_FORWARD_BACKTEST_PATH = "reports/walk_forward_backtest.csv"

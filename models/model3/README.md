@@ -39,3 +39,12 @@ Output chinh:
 - `reports/backtest.csv`
 - `reports/backtest_metrics.json`
 - `reports/model3_dashboard.html`
+- `reports/mart_model3_trading_signals.csv`
+- `reports/mart_model3_signal_summary.csv`
+- `reports/mart_model3_backtest_daily.csv`
+- `reports/mart_model3_metrics.csv`
+- `reports/model3_daily_insights.csv`
+
+Ghi chu schema/khoa:
+
+- Xem `MODEL3_SCHEMA.md` de biet PK/FK logic cua tung report va mart.
