@@ -11,16 +11,26 @@ ENV_PATH = PROJECT_ROOT / ".env"
 load_dotenv(ENV_PATH)
 
 
-CLICKHOUSE_HOST = os.getenv(
+def env_text(name: str, default: str = "") -> str:
+    value = os.getenv(name)
+    if value is None or not value.strip():
+        return default
+    return value.strip()
+
+
+CLICKHOUSE_HOST = env_text(
     "CLICKHOUSE_HOST",
     "cvzq3t560s.ap-southeast-1.aws.clickhouse.cloud",
 )
-CLICKHOUSE_PORT = int(os.getenv("CLICKHOUSE_PORT", "8443"))
-CLICKHOUSE_USERNAME = os.getenv("CLICKHOUSE_USERNAME", os.getenv("CLICKHOUSE_USER", "default"))
-CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD", "")
-CLICKHOUSE_DATABASE = os.getenv("CLICKHOUSE_DATABASE", "stock")
-CLICKHOUSE_FEATURES_TABLE = os.getenv("MODEL3_CLICKHOUSE_FEATURES_TABLE", "features_all")
-CLICKHOUSE_SECURE = os.getenv("CLICKHOUSE_SECURE", "true").strip().lower() in {
+CLICKHOUSE_PORT = int(env_text("CLICKHOUSE_PORT", "8443"))
+CLICKHOUSE_USERNAME = env_text("CLICKHOUSE_USERNAME", env_text("CLICKHOUSE_USER", "default"))
+CLICKHOUSE_PASSWORD = env_text("CLICKHOUSE_PASSWORD", "")
+CLICKHOUSE_DATABASE = env_text("CLICKHOUSE_DATABASE", "stock")
+CLICKHOUSE_FEATURES_TABLE = env_text("MODEL3_CLICKHOUSE_FEATURES_TABLE", "features_all")
+MODEL3_CLICKHOUSE_START_DATE = os.getenv("MODEL3_CLICKHOUSE_START_DATE", "2021-01-01").strip()
+MODEL3_CLICKHOUSE_END_DATE = os.getenv("MODEL3_CLICKHOUSE_END_DATE", "").strip()
+MODEL3_CLICKHOUSE_LIMIT = int(os.getenv("MODEL3_CLICKHOUSE_LIMIT", "0") or "0")
+CLICKHOUSE_SECURE = env_text("CLICKHOUSE_SECURE", "true").lower() in {
     "1",
     "true",
     "yes",

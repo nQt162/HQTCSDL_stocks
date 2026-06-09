@@ -19,7 +19,7 @@ permissions:
 jobs:
   run-task:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 360
     env:
       TARGET_DATE: ${{ github.event.inputs.target_date || '' }}
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Sửa cảnh báo Node.js sắp bị khai tử của GitHub

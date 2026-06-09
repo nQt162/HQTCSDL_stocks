@@ -96,15 +96,89 @@ MART_DESCRIPTIONS = {
     "stock.symbol_sector_encoding": "Bảng mã hóa ngành theo symbol.",
     "stock.mart_future_return_prediction": "Mart dự đoán future return của Model 2.",
     "stock.model4_benchmark_predictions": "Kết quả dự đoán outperform benchmark của Model 4.",
+    "stock_mart.mart_future_return_prediction": "Mart dự đoán future return của Model 2.",
     "stock_mart.mart_model1_price_forecast": "Mart dự báo return/giá của Model 1.",
     "stock_mart.mart_model1_top_expected_return": "Top cổ phiếu kỳ vọng tăng theo Model 1.",
     "stock_mart.mart_model1_backtest_daily": "Backtest hằng ngày của Model 1.",
+    "stock_mart.mart_model1_backtest_metrics": "Metrics backtest của Model 1.",
+    "stock_mart.mart_model1_backtest_sweep": "Kết quả sweep tham số backtest của Model 1.",
+    "stock_mart.mart_model1_feature_importance": "Độ quan trọng feature của Model 1.",
     "stock_mart.mart_model1_metrics": "Metrics của Model 1.",
-    "stock_mart.mart_model3_trade_signal": "Mart tín hiệu giao dịch của Model 3.",
+    "stock_mart.mart_model1_prediction_accuracy": "Bảng đánh giá đúng/sai dự đoán của Model 1.",
+    "stock_mart.mart_model2_future_return": "Mart dự đoán lợi suất 5 phiên của Model 2.",
+    "stock_mart.mart_model2_prediction_error": "Sai số dự đoán future_return_5d của Model 2.",
+    "stock_mart.mart_model2_backtest_daily": "Backtest hằng ngày của Model 2.",
+    "stock_mart.mart_model2_backtest_metrics": "Metrics backtest của Model 2.",
+    "stock_mart.mart_model2_backtest_sweep": "Kết quả sweep tham số backtest của Model 2.",
+    "stock_mart.mart_model2_feature_importance": "Độ quan trọng feature của Model 2.",
+    "stock_mart.mart_model2_metrics": "Metrics của Model 2.",
+    "stock_mart.mart_model3_trading_signals": "Mart tín hiệu BUY/HOLD/SELL của Model 3.",
+    "stock_mart.mart_model3_signal_summary": "Tổng hợp số lượng tín hiệu Model 3 theo ngày/ngành.",
+    "stock_mart.mart_model3_daily_insights": "Insight hằng ngày sinh từ kết quả Model 3.",
+    "stock_mart.mart_model3_backtest_daily": "Backtest hằng ngày của Model 3.",
+    "stock_mart.mart_model3_backtest_sweep": "Kết quả sweep tham số backtest của Model 3.",
+    "stock_mart.mart_model3_feature_importance": "Độ quan trọng feature của Model 3.",
+    "stock_mart.mart_model3_metrics": "Metrics của Model 3.",
+    "stock_mart.mart_model4_benchmark_outperformance": "Mart dự đoán outperform benchmark của Model 4.",
+    "stock_mart.mart_model4_daily_outperform_summary": "Tổng hợp outperform Model 4 theo ngày.",
+    "stock_mart.mart_model4_sector_outperform": "Hiệu suất outperform Model 4 theo ngành.",
+    "stock_mart.mart_model4_top_outperformers": "Top cổ phiếu có xác suất outperform cao theo Model 4.",
+    "stock_mart.mart_model4_feature_importance": "Độ quan trọng feature của Model 4.",
+    "stock_mart.mart_model4_metrics": "Metrics của Model 4.",
+    "stock_mart.model4_benchmark_predictions": "Kết quả dự đoán outperform benchmark của Model 4.",
+    "stock_mart.mart_model5_risk_alerts": "Mart cảnh báo rủi ro của Model 5.",
+    "stock_mart.mart_model5_risk_predictions": "Dự đoán xác suất rủi ro của Model 5.",
+    "stock_mart.mart_model5_risk_test_evaluation": "Đánh giá test set của Model 5.",
+    "stock_mart.mart_model5_risk_features": "Feature và label rủi ro của Model 5.",
+    "stock_mart.mart_model5_backtest_risk_alerts": "Backtest cảnh báo rủi ro của Model 5.",
+    "stock_mart.mart_model5_feature_importance": "Độ quan trọng feature của Model 5.",
+    "stock_mart.mart_model5_metrics": "Metrics của Model 5.",
     "stock_mart_model5_risk_prediction.risk_features": "Feature và label rủi ro của Model 5.",
     "stock_mart_model5_risk_prediction.risk_predictions": "Dự đoán xác suất rủi ro của Model 5.",
     "stock_mart_model5_risk_prediction.risk_test_evaluation": "Đánh giá test set của Model 5.",
     "stock_mart_model5_risk_prediction.mart_risk_alerts": "Mart cảnh báo rủi ro của Model 5.",
+}
+
+IMPORTANT_MARTS = [
+    {
+        "full_name": "stock_mart.mart_model1_price_forecast",
+        "model": "Model 1",
+        "mart": "mart_model1_price_forecast",
+        "vai trò": "Dự báo giá/return",
+        "lý do chọn": "Đầu ra chính của mô hình dự báo giá, dùng để so sánh predicted_close, predicted_return và real_close.",
+    },
+    {
+        "full_name": "stock_mart.mart_model2_future_return",
+        "model": "Model 2",
+        "mart": "mart_model2_future_return",
+        "vai trò": "Dự đoán lợi suất 5 phiên",
+        "lý do chọn": "Thể hiện trực tiếp predicted_future_return_5d, actual_future_return_5d và tín hiệu tăng/giảm.",
+    },
+    {
+        "full_name": "stock_mart.mart_model3_trading_signals",
+        "model": "Model 3",
+        "mart": "mart_model3_trading_signals",
+        "vai trò": "BUY/HOLD/SELL",
+        "lý do chọn": "Lưu tín hiệu giao dịch theo từng symbol/ngày cùng xác suất SELL, HOLD, BUY.",
+    },
+    {
+        "full_name": "stock_mart.mart_model4_benchmark_outperformance",
+        "model": "Model 4",
+        "mart": "mart_model4_benchmark_outperformance",
+        "vai trò": "Outperform benchmark",
+        "lý do chọn": "Cho biết cổ phiếu nào có khả năng vượt benchmark và xác suất outperform.",
+    },
+    {
+        "full_name": "stock_mart.mart_model5_risk_alerts",
+        "model": "Model 5",
+        "mart": "mart_model5_risk_alerts",
+        "vai trò": "Cảnh báo rủi ro",
+        "lý do chọn": "Mart quan trọng nhất cho bài toán risk, hiển thị risk_probability, risk_label và các feature cảnh báo.",
+    },
+]
+
+MART_TABLE_NAME_HINTS = {
+    "model4_benchmark_predictions",
 }
 
 
@@ -209,6 +283,324 @@ def get_symbols() -> list[str]:
     if result.empty or "symbol" not in result.columns:
         return []
     return result["symbol"].astype(str).str.upper().sort_values().tolist()
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def get_feature_dates(symbol: str | None = None, limit: int = 2000) -> list[date]:
+    where_sql = ""
+    if symbol:
+        where_sql = f"WHERE upper(trim(symbol)) = upper(trim({sql_string(symbol)}))"
+
+    result = run_query(
+        f"""
+        SELECT DISTINCT toDate(trading_date) AS trading_date
+        FROM {full_table_name(FEATURES_DATABASE, FEATURES_TABLE)}
+        {where_sql}
+        ORDER BY trading_date DESC
+        LIMIT {int(limit)}
+        """
+    )
+    if result.empty or "trading_date" not in result.columns:
+        return []
+    return pd.to_datetime(result["trading_date"], errors="coerce").dt.date.dropna().tolist()
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def get_feature_symbols() -> list[str]:
+    result = run_query(
+        f"""
+        SELECT symbol
+        FROM {full_table_name(FEATURES_DATABASE, FEATURES_TABLE)}
+        GROUP BY symbol
+        ORDER BY symbol
+        """
+    )
+    if result.empty or "symbol" not in result.columns:
+        return []
+    return result["symbol"].astype(str).str.upper().sort_values().tolist()
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def get_table_symbols(database: str, table: str, limit: int = 5000) -> list[str]:
+    result = run_query(
+        f"""
+        SELECT toString(symbol) AS symbol
+        FROM {full_table_name(database, table)}
+        WHERE notEmpty(toString(symbol))
+        GROUP BY symbol
+        ORDER BY symbol
+        LIMIT {int(limit)}
+        """
+    )
+    if result.empty or "symbol" not in result.columns:
+        return []
+    return result["symbol"].astype(str).str.upper().sort_values().tolist()
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def get_table_dates(
+    database: str,
+    table: str,
+    date_col: str,
+    symbol: str | None = None,
+    limit: int = 3000,
+) -> list[date]:
+    where_sql = ""
+    if symbol and symbol != "Tất cả":
+        where_sql = f"WHERE upper(trim(symbol)) = upper(trim({sql_string(symbol)}))"
+
+    result = run_query(
+        f"""
+        SELECT DISTINCT toDate({quote_identifier(date_col)}) AS date_value
+        FROM {full_table_name(database, table)}
+        {where_sql}
+        ORDER BY date_value DESC
+        LIMIT {int(limit)}
+        """
+    )
+    if result.empty or "date_value" not in result.columns:
+        return []
+    return pd.to_datetime(result["date_value"], errors="coerce").dt.date.dropna().tolist()
+
+
+def build_mart_where_clause(
+    columns: list[str],
+    symbol_filter: str | None,
+    date_col: str | None,
+    date_filter,
+) -> str:
+    where = []
+    if symbol_filter and symbol_filter != "Tất cả" and "symbol" in columns:
+        where.append(f"upper(trim(symbol)) = upper(trim({sql_string(symbol_filter)}))")
+
+    if date_col and date_filter:
+        if isinstance(date_filter, tuple) and len(date_filter) == 2:
+            start_date, end_date = date_filter
+            where.append(
+                f"toDate({quote_identifier(date_col)}) BETWEEN "
+                f"toDate({sql_string(start_date)}) AND toDate({sql_string(end_date)})"
+            )
+        elif not isinstance(date_filter, tuple):
+            where.append(
+                f"toDate({quote_identifier(date_col)}) = toDate({sql_string(date_filter)})"
+            )
+
+    return "WHERE " + " AND ".join(where) if where else ""
+
+
+def build_mart_preview_query(
+    database: str,
+    table: str,
+    columns: list[str],
+    symbol_filter: str | None,
+    date_col: str | None,
+    date_filter,
+    limit: int,
+) -> str:
+    where_sql = build_mart_where_clause(columns, symbol_filter, date_col, date_filter)
+    order_sql = f"ORDER BY {quote_identifier(date_col)} DESC" if date_col else ""
+    return f"""
+        SELECT *
+        FROM {full_table_name(database, table)}
+        {where_sql}
+        {order_sql}
+        LIMIT {int(limit)}
+    """
+
+
+def get_mart_summary(
+    database: str,
+    table: str,
+    columns: list[str],
+    symbol_filter: str | None,
+    date_col: str | None,
+    date_filter,
+) -> pd.DataFrame:
+    where_sql = build_mart_where_clause(columns, symbol_filter, date_col, date_filter)
+    symbol_expr = "uniqExact(symbol) AS symbol_count" if "symbol" in columns else "0 AS symbol_count"
+    if date_col:
+        date_expr = (
+            f"min(toDate({quote_identifier(date_col)})) AS min_date, "
+            f"max(toDate({quote_identifier(date_col)})) AS max_date"
+        )
+    else:
+        date_expr = "NULL AS min_date, NULL AS max_date"
+
+    return run_query(
+        f"""
+        SELECT
+            count() AS total_rows,
+            {symbol_expr},
+            {date_expr}
+        FROM {full_table_name(database, table)}
+        {where_sql}
+        """
+    )
+
+
+def format_insight_value(column: str, value) -> str:
+    if value is None or pd.isna(value):
+        return "N/A"
+    numeric_value = float(value)
+    lower_column = column.lower()
+    if (
+        "probability" in lower_column
+        or "return" in lower_column
+        or "rate" in lower_column
+        or "ratio" in lower_column
+        or "accuracy" in lower_column
+    ):
+        return pct(numeric_value)
+    return f"{numeric_value:,.4f}"
+
+
+def render_mart_insights(
+    table_full_name: str,
+    mart_df: pd.DataFrame,
+    selected_symbol: str | None,
+    date_col: str | None,
+    summary_df: pd.DataFrame | None = None,
+) -> None:
+    st.subheader("Insight từ mart đã chọn")
+    if mart_df.empty:
+        st.info("Không có dữ liệu mart phù hợp với bộ lọc hiện tại.")
+        return
+
+    total_rows = len(mart_df)
+    symbol_count = mart_df["symbol"].nunique() if "symbol" in mart_df.columns else None
+    min_date = None
+    max_date = None
+    if summary_df is not None and not summary_df.empty:
+        row = summary_df.iloc[0]
+        total_rows = int(row.get("total_rows", total_rows) or 0)
+        symbol_count = row.get("symbol_count", symbol_count)
+        min_date = row.get("min_date")
+        max_date = row.get("max_date")
+
+    metric_cols = st.columns(4)
+    metric_cols[0].metric("Dòng đang phân tích", number(total_rows))
+    if "symbol" in mart_df.columns:
+        metric_cols[1].metric("Số symbol", number(symbol_count))
+    else:
+        metric_cols[1].metric("Số symbol", "N/A")
+
+    if max_date is not None and min_date is not None and not pd.isna(max_date) and not pd.isna(min_date):
+        metric_cols[2].metric("Ngày mới nhất", pd.to_datetime(max_date).strftime("%Y-%m-%d"))
+        metric_cols[3].metric("Ngày cũ nhất", pd.to_datetime(min_date).strftime("%Y-%m-%d"))
+    elif date_col and date_col in mart_df.columns:
+        parsed_dates = pd.to_datetime(mart_df[date_col], errors="coerce").dropna()
+        if not parsed_dates.empty:
+            metric_cols[2].metric("Ngày mới nhất", parsed_dates.max().strftime("%Y-%m-%d"))
+            metric_cols[3].metric("Ngày cũ nhất", parsed_dates.min().strftime("%Y-%m-%d"))
+        else:
+            metric_cols[2].metric("Ngày mới nhất", "N/A")
+            metric_cols[3].metric("Ngày cũ nhất", "N/A")
+    else:
+        metric_cols[2].metric("Ngày mới nhất", "N/A")
+        metric_cols[3].metric("Ngày cũ nhất", "N/A")
+
+    insights = [
+        f"Đang đọc mart `{table_full_name}`"
+        + (f" cho symbol `{selected_symbol}`." if selected_symbol and selected_symbol != "Tất cả" else ".")
+    ]
+
+    label_columns = [
+        column
+        for column in [
+            "risk_label",
+            "predicted_risk_label",
+            "actual_risk_label",
+            "adjusted_signal",
+            "predicted_signal",
+            "target_signal",
+            "signal",
+            "prediction_correct",
+            "is_correct",
+        ]
+        if column in mart_df.columns
+    ]
+    for column in label_columns[:3]:
+        counts = mart_df[column].astype(str).value_counts(dropna=False).head(3)
+        summary = ", ".join(f"{idx}: {int(value)}" for idx, value in counts.items())
+        insights.append(f"Phân bố `{column}` nổi bật: {summary}.")
+
+    numeric_priority = [
+        "risk_probability",
+        "outperform_probability",
+        "predicted_return",
+        "predicted_future_return_5d",
+        "actual_future_return_5d",
+        "actual_return",
+        "target_return",
+        "return_5d",
+        "signal_confidence",
+        "buy_probability",
+        "sell_probability",
+        "close",
+        "volume",
+    ]
+    numeric_columns = []
+    for column in numeric_priority:
+        if column in mart_df.columns:
+            numeric_columns.append(column)
+    for column in mart_df.columns:
+        if column in numeric_columns:
+            continue
+        numeric = pd.to_numeric(mart_df[column], errors="coerce")
+        if numeric.notna().sum() > 0:
+            numeric_columns.append(column)
+        if len(numeric_columns) >= 6:
+            break
+
+    numeric_summary_rows = []
+    for column in numeric_columns[:6]:
+        numeric = pd.to_numeric(mart_df[column], errors="coerce").dropna()
+        if numeric.empty:
+            continue
+        numeric_summary_rows.append(
+            {
+                "metric": column,
+                "mean": numeric.mean(),
+                "min": numeric.min(),
+                "max": numeric.max(),
+            }
+        )
+        insights.append(
+            f"`{column}` trung bình {format_insight_value(column, numeric.mean())}, "
+            f"cao nhất {format_insight_value(column, numeric.max())}."
+        )
+
+    if "risk_probability" in mart_df.columns:
+        numeric = pd.to_numeric(mart_df["risk_probability"], errors="coerce")
+        if numeric.notna().any():
+            top_idx = numeric.idxmax()
+            top_row = mart_df.loc[top_idx]
+            top_symbol = top_row.get("symbol", selected_symbol or "N/A")
+            insights.append(
+                f"Rủi ro cao nhất thuộc `{top_symbol}` với "
+                f"`risk_probability` = {pct(numeric.loc[top_idx])}."
+            )
+
+    if "predicted_return" in mart_df.columns:
+        numeric = pd.to_numeric(mart_df["predicted_return"], errors="coerce")
+        if numeric.notna().any():
+            top_idx = numeric.idxmax()
+            top_row = mart_df.loc[top_idx]
+            top_symbol = top_row.get("symbol", selected_symbol or "N/A")
+            insights.append(
+                f"Kỳ vọng return cao nhất thuộc `{top_symbol}`: "
+                f"{pct(numeric.loc[top_idx])}."
+            )
+
+    for item in insights[:10]:
+        st.markdown(f"- {item}")
+
+    if numeric_summary_rows:
+        st.dataframe(
+            pd.DataFrame(numeric_summary_rows),
+            use_container_width=True,
+            hide_index=True,
+        )
 
 
 def first_existing(columns: list[str], candidates: list[str]) -> str | None:
@@ -585,7 +977,7 @@ def render_feature_engineering_page() -> None:
 
     st.subheader("Truy vấn bảng features_all")
     try:
-        symbols = get_symbols()
+        symbols = get_feature_symbols()
     except Exception as exc:
         display_error("Không tải được danh sách symbol.", exc)
         return
@@ -649,7 +1041,10 @@ def render_feature_engineering_page() -> None:
 
 def render_data_mart_page() -> None:
     st.header("Data Mart")
-    st.caption("Danh sách bảng mart/warehouse được lấy trực tiếp từ system.tables của ClickHouse.")
+    st.caption(
+        "Các bảng mart được lấy trực tiếp từ system.tables của ClickHouse. "
+        "Phần đầu trang ưu tiên 5 mart quan trọng nhất, mỗi model một mart chính."
+    )
 
     databases = [
         CLICKHOUSE_DATABASE,
@@ -682,14 +1077,91 @@ def render_data_mart_page() -> None:
     tables["full_name"] = tables["database"].astype(str) + "." + tables["table_name"].astype(str)
     tables["nội dung"] = tables["full_name"].map(MART_DESCRIPTIONS).fillna("Bảng dữ liệu ClickHouse.")
     tables["total_rows"] = tables["total_rows"].fillna(0).astype(int)
+    tables["total_bytes"] = pd.to_numeric(tables["total_bytes"], errors="coerce").fillna(0).astype(int)
+    tables["is_mart"] = (
+        tables["database"].astype(str).str.contains("mart", case=False, na=False)
+        | tables["table_name"].astype(str).str.startswith("mart_")
+        | tables["table_name"].astype(str).isin(MART_TABLE_NAME_HINTS)
+    )
+    mart_tables = tables[tables["is_mart"]].copy()
+    if mart_tables.empty:
+        mart_tables = tables.copy()
 
+    important_rows = []
+    important_full_names = []
+    for rank, spec in enumerate(IMPORTANT_MARTS, start=1):
+        match = mart_tables[mart_tables["full_name"] == spec["full_name"]]
+        if match.empty:
+            match = mart_tables[mart_tables["table_name"] == spec["mart"]]
+
+        row = {
+            "ưu tiên": rank,
+            "model": spec["model"],
+            "mart": spec["mart"],
+            "full_name": spec["full_name"],
+            "vai trò": spec["vai trò"],
+            "lý do chọn": spec["lý do chọn"],
+            "trạng thái": "Chưa thấy trong ClickHouse",
+            "total_rows": 0,
+        }
+        if not match.empty:
+            first_match = match.iloc[0]
+            row["full_name"] = first_match["full_name"]
+            row["trạng thái"] = "Đã có"
+            row["total_rows"] = int(first_match["total_rows"])
+            important_full_names.append(first_match["full_name"])
+        important_rows.append(row)
+
+    important_df = pd.DataFrame(important_rows)
+
+    metric_cols = st.columns(4)
+    metric_cols[0].metric("Tổng mart tìm thấy", number(len(mart_tables)))
+    metric_cols[1].metric("Mart trọng tâm đã có", f"{len(important_full_names)}/5")
+    metric_cols[2].metric("Tổng dòng mart", number(mart_tables["total_rows"].sum()))
+    metric_cols[3].metric("Database đang quét", number(len(set(databases))))
+
+    st.subheader("5 data mart trọng tâm")
     st.dataframe(
-        tables[["full_name", "nội dung", "total_rows", "total_bytes"]],
+        important_df[
+            ["ưu tiên", "model", "full_name", "vai trò", "lý do chọn", "trạng thái", "total_rows"]
+        ],
         use_container_width=True,
         hide_index=True,
     )
 
-    selected_table = st.selectbox("Chọn bảng để preview", tables["full_name"].tolist())
+    missing_important = important_df[important_df["trạng thái"] != "Đã có"]
+    if not missing_important.empty:
+        st.info(
+            "Một số mart trọng tâm chưa thấy trong ClickHouse hiện tại: "
+            + ", ".join(missing_important["mart"].astype(str))
+        )
+
+    st.subheader("Toàn bộ data mart trong ClickHouse")
+    search = st.text_input("Tìm mart", value="", placeholder="Nhập tên mart, ví dụ: model3, risk, forecast...")
+    filtered_marts = mart_tables.copy()
+    if search.strip():
+        pattern = search.strip().lower()
+        filtered_marts = filtered_marts[
+            filtered_marts["full_name"].astype(str).str.lower().str.contains(pattern)
+            | filtered_marts["nội dung"].astype(str).str.lower().str.contains(pattern)
+        ]
+
+    if filtered_marts.empty:
+        st.warning("Không có mart phù hợp với từ khóa tìm kiếm.")
+        return
+
+    st.dataframe(
+        filtered_marts[["full_name", "nội dung", "total_rows", "total_bytes"]],
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    filtered_names = set(filtered_marts["full_name"].tolist())
+    important_filtered_names = [name for name in important_full_names if name in filtered_names]
+    select_options = important_filtered_names + [
+        name for name in filtered_marts["full_name"].tolist() if name not in important_filtered_names
+    ]
+    selected_table = st.selectbox("Chọn mart để preview", select_options)
     selected_db, selected_name = selected_table.split(".", 1)
     columns = get_table_columns(selected_db, selected_name)
 
@@ -700,18 +1172,69 @@ def render_data_mart_page() -> None:
     st.write("Schema")
     st.dataframe(pd.DataFrame({"column": columns}), use_container_width=True, hide_index=True)
 
-    symbol_filter = None
+    selected_symbol = None
     date_filter = None
     date_col = first_existing(
         columns,
-        ["trading_date", "date", "prediction_date", "target_date", "created_at", "updated_at"],
+        [
+            "trading_date",
+            "prediction_date",
+            "target_date",
+            "date",
+            "run_date",
+            "insight_date",
+            "created_at",
+            "updated_at",
+        ],
     )
 
     filter_cols = st.columns(3)
     if "symbol" in columns:
-        symbol_filter = filter_cols[0].text_input("Lọc symbol", value="")
+        try:
+            table_symbols = get_table_symbols(selected_db, selected_name)
+        except Exception as exc:
+            table_symbols = []
+            filter_cols[0].caption(f"Không tải được danh sách symbol: {exc}")
+
+        if table_symbols:
+            selected_symbol = filter_cols[0].selectbox(
+                "Chọn symbol",
+                ["Tất cả", *table_symbols],
+                index=0,
+                key=f"mart_symbol_{selected_db}_{selected_name}",
+            )
+        else:
+            selected_symbol = filter_cols[0].text_input("Lọc symbol", value="")
     if date_col:
-        date_filter = filter_cols[1].date_input(f"Lọc ngày theo {date_col}", value=())
+        try:
+            available_mart_dates = get_table_dates(
+                selected_db,
+                selected_name,
+                date_col,
+                selected_symbol,
+            )
+        except Exception as exc:
+            available_mart_dates = []
+            filter_cols[1].caption(f"Không tải được danh sách ngày: {exc}")
+
+        if available_mart_dates:
+            date_choice = filter_cols[1].selectbox(
+                f"Chọn ngày có dữ liệu ({date_col})",
+                ["Tất cả", *available_mart_dates],
+                index=0,
+                format_func=lambda value: value
+                if isinstance(value, str)
+                else value.strftime("%Y-%m-%d"),
+                key=f"mart_date_{selected_db}_{selected_name}_{selected_symbol}",
+            )
+            date_filter = None if date_choice == "Tất cả" else date_choice
+            filter_cols[1].caption(
+                "Khoảng ngày mart: "
+                f"{available_mart_dates[-1].strftime('%Y-%m-%d')} -> "
+                f"{available_mart_dates[0].strftime('%Y-%m-%d')}"
+            )
+        else:
+            filter_cols[1].warning("Mart này chưa có ngày phù hợp với symbol đã chọn.")
     preview_limit = filter_cols[2].number_input(
         "Preview rows",
         min_value=20,
@@ -720,27 +1243,35 @@ def render_data_mart_page() -> None:
         step=20,
     )
 
-    where = []
-    if symbol_filter:
-        where.append(f"upper(trim(symbol)) = upper(trim({sql_string(symbol_filter)}))")
-    if isinstance(date_filter, tuple) and len(date_filter) == 2 and date_col:
-        where.append(
-            f"toDate({quote_identifier(date_col)}) BETWEEN "
-            f"toDate({sql_string(date_filter[0])}) AND toDate({sql_string(date_filter[1])})"
-        )
-    where_sql = "WHERE " + " AND ".join(where) if where else ""
-    order_sql = f"ORDER BY {quote_identifier(date_col)} DESC" if date_col else ""
-
     try:
-        preview = run_query(
-            f"""
-            SELECT *
-            FROM {full_table_name(selected_db, selected_name)}
-            {where_sql}
-            {order_sql}
-            LIMIT {int(preview_limit)}
-            """
+        preview_query = build_mart_preview_query(
+            database=selected_db,
+            table=selected_name,
+            columns=columns,
+            symbol_filter=selected_symbol,
+            date_col=date_col,
+            date_filter=date_filter,
+            limit=int(preview_limit),
         )
+        summary = get_mart_summary(
+            database=selected_db,
+            table=selected_name,
+            columns=columns,
+            symbol_filter=selected_symbol,
+            date_col=date_col,
+            date_filter=date_filter,
+        )
+        preview = run_query(preview_query)
+        render_mart_insights(
+            table_full_name=selected_table,
+            mart_df=preview,
+            selected_symbol=selected_symbol,
+            date_col=date_col,
+            summary_df=summary,
+        )
+        with st.expander("SQL preview đang chạy"):
+            st.code(preview_query, language="sql")
+        st.subheader("Bảng mart trong ClickHouse")
         st.dataframe(preview, use_container_width=True, hide_index=True)
     except Exception as exc:
         display_error("Không preview được bảng đã chọn.", exc)
@@ -751,7 +1282,7 @@ def render_model1_prediction() -> None:
     st.caption("Logic dựa trên models/model1/test.py.")
 
     try:
-        symbols = get_symbols()
+        symbols = get_feature_symbols()
     except Exception as exc:
         display_error("Không tải được symbol.", exc)
         return
@@ -763,7 +1294,21 @@ def render_model1_prediction() -> None:
         index=symbols.index("FPT") if "FPT" in symbols else 0,
         key="model1_symbol",
     )
-    trading_date = col2.date_input("Ngày giao dịch", key="model1_date")
+    try:
+        valid_dates = get_feature_dates(symbol)
+    except Exception as exc:
+        display_error("Không tải được danh sách ngày có feature.", exc)
+        return
+    if not valid_dates:
+        st.warning(f"Không có ngày feature nào cho mã {symbol}.")
+        return
+    trading_date = col2.selectbox(
+        "Ngày giao dịch có dữ liệu",
+        valid_dates,
+        index=0,
+        format_func=lambda value: value.strftime("%Y-%m-%d"),
+        key="model1_date",
+    )
 
     if not st.button("Dự đoán Model 1", type="primary"):
         return
@@ -840,7 +1385,7 @@ def render_model2_prediction() -> None:
     st.caption("Logic dựa trên models/model2/streamlit_model2_demo.py, nhưng dùng .env thay vì hardcode credential.")
 
     try:
-        symbols = get_symbols()
+        symbols = get_feature_symbols()
     except Exception as exc:
         display_error("Không tải được symbol.", exc)
         return
@@ -852,7 +1397,21 @@ def render_model2_prediction() -> None:
         index=symbols.index("FPT") if "FPT" in symbols else 0,
         key="model2_symbol",
     )
-    trading_date = col2.date_input("Ngày giao dịch", key="model2_date")
+    try:
+        valid_dates = get_feature_dates(symbol)
+    except Exception as exc:
+        display_error("Không tải được danh sách ngày có feature.", exc)
+        return
+    if not valid_dates:
+        st.warning(f"Không có ngày feature nào cho mã {symbol}.")
+        return
+    trading_date = col2.selectbox(
+        "Ngày giao dịch có dữ liệu",
+        valid_dates,
+        index=0,
+        format_func=lambda value: value.strftime("%Y-%m-%d"),
+        key="model2_date",
+    )
 
     if not st.button("Dự đoán Model 2", type="primary"):
         return
@@ -906,14 +1465,29 @@ def render_model3_prediction() -> None:
     st.caption("Logic dựa trên models/model3/test.py.")
 
     try:
-        symbols = ["Tất cả"] + get_symbols()
+        symbols = ["Tất cả"] + get_feature_symbols()
     except Exception as exc:
         display_error("Không tải được symbol.", exc)
         return
 
     col1, col2, col3 = st.columns([1, 1, 1])
     selected_symbol = col1.selectbox("Symbol", symbols, key="model3_symbol")
-    trading_date = col2.date_input("Ngày giao dịch", key="model3_date")
+    symbol_filter = None if selected_symbol == "Tất cả" else selected_symbol
+    try:
+        valid_dates = get_feature_dates(symbol_filter)
+    except Exception as exc:
+        display_error("Không tải được danh sách ngày có feature.", exc)
+        return
+    if not valid_dates:
+        st.warning("Không có ngày feature phù hợp với lựa chọn symbol.")
+        return
+    trading_date = col2.selectbox(
+        "Ngày giao dịch có dữ liệu",
+        valid_dates,
+        index=0,
+        format_func=lambda value: value.strftime("%Y-%m-%d"),
+        key="model3_date",
+    )
     min_prob = col3.slider("Ngưỡng confidence", 0.0, 1.0, 0.60, 0.05)
 
     if not st.button("Dự đoán Model 3", type="primary"):
@@ -921,7 +1495,6 @@ def render_model3_prediction() -> None:
 
     try:
         model, features, signal_labels = load_model3_artifact()
-        symbol_filter = None if selected_symbol == "Tất cả" else selected_symbol
         df = fetch_feature_rows(symbol=symbol_filter, trading_date=trading_date, limit=1000)
     except Exception as exc:
         display_error("Không tải được model hoặc dữ liệu Model 3.", exc)
@@ -1018,26 +1591,38 @@ def render_insight_page() -> None:
     st.header("Insight")
 
     try:
-        latest_date_df = run_query(
-            f"""
-            SELECT max(toDate(trading_date)) AS latest_date
-            FROM {full_table_name(FEATURES_DATABASE, FEATURES_TABLE)}
-            """
-        )
-        latest_date = latest_date_df.iloc[0]["latest_date"]
-        latest_filter = f"toDate(f.trading_date) = toDate({sql_string(latest_date)})"
+        available_dates = get_feature_dates(limit=3000)
     except Exception as exc:
-        display_error("Không lấy được ngày feature mới nhất.", exc)
+        display_error("Không lấy được danh sách ngày feature.", exc)
         return
 
-    st.caption(f"Dữ liệu feature mới nhất: {latest_date}")
+    if not available_dates:
+        st.warning("Chưa có ngày feature nào để sinh insight.")
+        return
+
+    selected_date = st.selectbox(
+        "Ngày insight",
+        available_dates,
+        index=0,
+        format_func=lambda value: value.strftime("%Y-%m-%d"),
+    )
+    selected_filter = (
+        "toDate(f.trading_date) = "
+        f"toDate({sql_string(selected_date)})"
+    )
+
+    latest_available_date = available_dates[0]
+    st.caption(
+        f"Đang sinh insight cho ngày {selected_date}. "
+        f"Ngày feature mới nhất hiện có: {latest_available_date}."
+    )
 
     try:
         top_gain = run_query(
             f"""
             SELECT symbol, close, return_5d
             FROM {full_table_name(FEATURES_DATABASE, FEATURES_TABLE)} AS f
-            WHERE {latest_filter} AND return_5d IS NOT NULL
+            WHERE {selected_filter} AND return_5d IS NOT NULL
             ORDER BY return_5d DESC
             LIMIT 10
             """
@@ -1046,7 +1631,7 @@ def render_insight_page() -> None:
             f"""
             SELECT symbol, close, return_5d
             FROM {full_table_name(FEATURES_DATABASE, FEATURES_TABLE)} AS f
-            WHERE {latest_filter} AND return_5d IS NOT NULL
+            WHERE {selected_filter} AND return_5d IS NOT NULL
             ORDER BY return_5d ASC
             LIMIT 10
             """
@@ -1055,7 +1640,7 @@ def render_insight_page() -> None:
             f"""
             SELECT symbol, close, volume
             FROM {full_table_name(FEATURES_DATABASE, FEATURES_TABLE)} AS f
-            WHERE {latest_filter}
+            WHERE {selected_filter}
             ORDER BY volume DESC
             LIMIT 10
             """
@@ -1069,7 +1654,7 @@ def render_insight_page() -> None:
             FROM {full_table_name(FEATURES_DATABASE, FEATURES_TABLE)} AS f
             LEFT JOIN {full_table_name(CLICKHOUSE_DATABASE, SYMBOL_TABLE)} AS s
                 ON f.symbol = s.symbol
-            WHERE {latest_filter}
+            WHERE {selected_filter}
               AND f.return_5d IS NOT NULL
             GROUP BY sector
             ORDER BY avg_return_5d DESC
@@ -1080,7 +1665,7 @@ def render_insight_page() -> None:
             f"""
             SELECT symbol, close, volatility_20d, abs(return_5d) AS abs_return_5d
             FROM {full_table_name(FEATURES_DATABASE, FEATURES_TABLE)} AS f
-            WHERE {latest_filter}
+            WHERE {selected_filter}
             ORDER BY volatility_20d DESC, abs_return_5d DESC
             LIMIT 10
             """

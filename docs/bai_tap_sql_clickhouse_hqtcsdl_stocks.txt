@@ -1,0 +1,1042 @@
+﻿Bộ bài tập SQL ClickHouse cho dự án HQTCSDL Stocks
+Tài liệu này tổng hợp các câu lệnh SQL/ClickHouse đang xuất hiện trong dự án và chuyển chúng thành bộ đề luyện tập cho nhóm.
+Đề bài tổng quát
+Bạn đang xây dựng hệ thống dữ liệu chứng khoán gồm dữ liệu OHLCV, thông tin symbol/ngành, feature engineering, data mart cho nhiều mô hình dự đoán, dashboard insight và kiểm tra chất lượng dữ liệu. Hãy dùng ClickHouse để tạo bảng, nạp/kiểm tra dữ liệu, truy vấn phân tích và thiết kế mart phục vụ dashboard.
+Các SQL bên dưới dùng tên bảng theo code hiện tại: stock.stock_prices, stock.stock_symbols, stock.symbol_sector_encoding, stock.features_all, stock_mart.*, stock_mart_model5_risk_prediction.*. Nếu môi trường dùng schema đề xuất trong docs/clickhouse_schema_proposal.sql thì đổi database/table tương ứng.
+Nguồn SQL đã rà trong repo
+- docs/clickhouse_schema_proposal.sql: đề xuất schema staging, DW, mart, audit.
+- connect_clickhouse/*.py: tạo database/bảng stock, upload giá, symbol, features_all.
+- models/model1/src/data_loader.py và marts.py: đọc features_all, tạo mart dự báo giá, top expected return, backtest, metrics, insights.
+- models/model2/src/*.py và streamlit_model2_demo.py: đọc features_all, truy vấn symbol/ngày, tạo mart future_return_5d.
+- models/model3/src/data_loader.py và test.py: đọc features_all và batch theo ngày cho BUY/HOLD/SELL.
+- models/model4/*.py: lọc top 100 mã benchmark, đọc stock_prices, upload và verify prediction outperform.
+- models/model5/*.py: risk features, risk predictions, risk mart, dashboard risk view, kiểm tra/alter schema.
+- main_web.py: dashboard tổng quan, lookup OHLCV, feature preview, data mart preview, insight, data quality.
+- upload_all.py: upload tổng hợp, tạo bảng động, metadata quan hệ và key bảng.
+
+===============================
+A. Kết nối và metadata hệ thống
+===============================
+Bài 01. Kiểm tra phiên bản ClickHouse
+Đề bài: Viết truy vấn kiểm tra server ClickHouse đang kết nối là phiên bản nào.
+Ý nghĩa: Dùng ở bước smoke test để biết client đã kết nối đúng ClickHouse trước khi nạp dữ liệu hoặc chạy pipeline.
+Nguồn trong dự án: connect_clickhouse/test_clickhouse_connection.py
+SQL mẫu:
+SELECT version();
+Bài 02. Kiểm tra một bảng có tồn tại hay không
+Đề bài: Kiểm tra bảng features_all có tồn tại trong database stock hay chưa.
+Ý nghĩa: Dùng trước khi dashboard hoặc pipeline đọc bảng để tránh lỗi truy vấn vào bảng chưa được tạo.
+Nguồn trong dự án: main_web.py, models/model5/create_risk_mart.py
+SQL mẫu:
+SELECT count() AS cnt
+FROM system.tables
+WHERE database = 'stock'
+  AND name = 'features_all';
+Bài 03. Xem danh sách cột của một bảng
+Đề bài: Lấy danh sách cột của bảng stock.features_all theo đúng thứ tự schema.
+Ý nghĩa: Dùng để preview schema trong trang Data Mart và để kiểm tra thiếu cột trước khi upload thêm dữ liệu.
+Nguồn trong dự án: main_web.py, models/model5/upload_outputs_to_clickhouse.py
+SQL mẫu:
+SELECT name
+FROM system.columns
+WHERE database = 'stock'
+  AND table = 'features_all'
+ORDER BY position;
+Bài 04. Liệt kê các bảng mart/warehouse
+Đề bài: Liệt kê bảng trong các database stock, stock_mart và stock_mart_model5_risk_prediction.
+Ý nghĩa: Phục vụ trang Data Mart: cho người dùng thấy hệ thống hiện có những bảng phân tích nào, số dòng và dung lượng bao nhiêu.
+Nguồn trong dự án: main_web.py
+SQL mẫu:
+SELECT
+    database,
+    name AS table_name,
+    total_rows,
+    total_bytes
+FROM system.tables
+WHERE database IN ('stock', 'stock_mart', 'stock_mart_model5_risk_prediction')
+ORDER BY database, name;
+
+=================================
+B. Nạp dữ liệu gốc vào ClickHouse
+=================================
+Bài 05. Tạo database stock
+Đề bài: Tạo database chính để lưu dữ liệu cổ phiếu, symbol và feature.
+Ý nghĩa: Đây là vùng dữ liệu hiện tại mà các script upload và các model đang đọc trực tiếp.
+Nguồn trong dự án: connect_clickhouse/load_prices_to_click_house.py, connect_clickhouse/load_symbols_to_clickhouse.py
+SQL mẫu:
+CREATE DATABASE IF NOT EXISTS stock;
+Bài 06. Tạo bảng giá OHLCV
+Đề bài: Tạo bảng stock.stock_prices để lưu dữ liệu giao dịch ngày gồm open, high, low, close, volume.
+Ý nghĩa: Đây là bảng nguồn quan trọng nhất cho dashboard, feature engineering và một số model benchmark.
+Nguồn trong dự án: connect_clickhouse/load_prices_to_click_house.py
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock.stock_prices
+(
+    symbol String,
+    date DateTime,
+    open Float64,
+    high Float64,
+    low Float64,
+    close Float64,
+    volume Float64
+)
+ENGINE = MergeTree
+ORDER BY (symbol, date);
+Bài 07. Xóa dữ liệu cũ trước khi upload lại giá
+Đề bài: Làm rỗng bảng stock.stock_prices trước khi insert lại dữ liệu sạch từ CSV.
+Ý nghĩa: Giúp pipeline chạy kiểu replace, tránh nhân đôi dữ liệu khi upload lại cùng một file.
+Nguồn trong dự án: connect_clickhouse/load_prices_to_click_house.py
+SQL mẫu:
+TRUNCATE TABLE stock.stock_prices;
+Bài 08. Tạo bảng thông tin mã cổ phiếu
+Đề bài: Tạo bảng stock.stock_symbols chứa mã, tên công ty, ngành và ngày niêm yết.
+Ý nghĩa: Bảng dimension để join thêm thông tin ngành/công ty vào các insight và mart.
+Nguồn trong dự án: connect_clickhouse/load_symbols_to_clickhouse.py
+SQL mẫu:
+DROP TABLE IF EXISTS stock.stock_symbols;
+
+CREATE TABLE stock.stock_symbols
+(
+    symbol String,
+    company_name String,
+    sector Nullable(String),
+    encode_sector Nullable(Int32),
+    listed_date Nullable(DateTime)
+)
+ENGINE = MergeTree
+ORDER BY symbol;
+Bài 09. Tạo bảng mã hóa ngành theo symbol
+Đề bài: Tạo bảng stock.symbol_sector_encoding để map symbol sang encode_sector.
+Ý nghĩa: Phục vụ model training vì mô hình thường dùng ngành dạng số thay vì text.
+Nguồn trong dự án: connect_clickhouse/load_symbols_to_clickhouse.py
+SQL mẫu:
+DROP TABLE IF EXISTS stock.symbol_sector_encoding;
+
+CREATE TABLE stock.symbol_sector_encoding
+(
+    symbol String,
+    encode_sector Nullable(Int32)
+)
+ENGINE = MergeTree
+ORDER BY symbol;
+Bài 10. Đọc dữ liệu giá theo thứ tự chuẩn
+Đề bài: Lấy dữ liệu giá từ stock.stock_prices và đổi cột date thành trading_date.
+Ý nghĩa: Chuẩn hóa tên cột đầu vào cho feature engineering, model training và dashboard.
+Nguồn trong dự án: connect_clickhouse/features_all.py, models/model4/benchmark_features.py
+SQL mẫu:
+SELECT
+    date AS trading_date,
+    symbol,
+    open,
+    high,
+    low,
+    close,
+    volume
+FROM stock.stock_prices
+ORDER BY symbol, date;
+
+=============================
+C. Feature store features_all
+=============================
+Bài 11. Tạo bảng feature dùng chung cho các model
+Đề bài: Tạo bảng stock.features_all chứa OHLCV và các feature kỹ thuật như return, MA, volatility, drawdown, volume ratio.
+Ý nghĩa: Đây là feature store trung tâm, model1, model2, model3, model4, model5 đều đọc hoặc tái sử dụng logic từ bảng này.
+Nguồn trong dự án: connect_clickhouse/features_all.py, docs/clickhouse_schema_proposal.sql
+SQL mẫu:
+DROP TABLE IF EXISTS stock.features_all;
+
+CREATE TABLE IF NOT EXISTS stock.features_all
+(
+    trading_date Date,
+    symbol String,
+    encode_sector Nullable(Int32),
+    open Nullable(Float64),
+    high Nullable(Float64),
+    low Nullable(Float64),
+    close Nullable(Float64),
+    volume Nullable(Float64),
+    return_1d Nullable(Float64),
+    return_3d Nullable(Float64),
+    return_5d Nullable(Float64),
+    return_10d Nullable(Float64),
+    return_20d Nullable(Float64),
+    ma_5 Nullable(Float64),
+    ma_20 Nullable(Float64),
+    ma_50 Nullable(Float64),
+    price_vs_ma20 Nullable(Float64),
+    ma5_vs_ma20 Nullable(Float64),
+    volatility_5d Nullable(Float64),
+    volatility_20d Nullable(Float64),
+    volatility_change Nullable(Float64),
+    rolling_max_20d Nullable(Float64),
+    drawdown_20d Nullable(Float64),
+    volume_ma_5 Nullable(Float64),
+    volume_ma_20 Nullable(Float64),
+    volume_ratio_5_20 Nullable(Float64),
+    volume_change_1d Nullable(Float64),
+    daily_range Nullable(Float64),
+    body_ratio Nullable(Float64),
+    close_position Nullable(Float64),
+    created_at DateTime
+)
+ENGINE = MergeTree
+ORDER BY (symbol, trading_date);
+Bài 12. Đọc mã hóa ngành để gắn vào feature
+Đề bài: Lấy encode_sector theo từng symbol từ bảng symbol_sector_encoding.
+Ý nghĩa: Sau khi tạo feature kỹ thuật từ giá, pipeline join thêm encode_sector để model có biến ngành.
+Nguồn trong dự án: connect_clickhouse/features_all.py
+SQL mẫu:
+SELECT
+    symbol,
+    encode_sector
+FROM stock.symbol_sector_encoding
+ORDER BY symbol;
+Bài 13. Xuất toàn bộ feature theo thứ tự model cần
+Đề bài: Lấy toàn bộ dữ liệu feature store theo symbol và ngày giao dịch.
+Ý nghĩa: Đây là mẫu truy vấn dùng cho export CSV, model1, model2, model3, model4 và model5 khi train/predict.
+Nguồn trong dự án: models/model1/src/data_loader.py, models/model2/src/data_loader.py, models/model3/src/data_loader.py, models/model4/train_benchmark_model.py, models/model5/risk_features.py
+SQL mẫu:
+SELECT *
+FROM stock.features_all
+ORDER BY symbol, trading_date;
+Bài 14. Lấy danh sách symbol có feature
+Đề bài: Lấy danh sách mã cổ phiếu có trong features_all để đưa vào selectbox trên web.
+Ý nghĩa: Tránh chọn symbol không có feature, nguyên nhân từng làm trang dự đoán báo không tìm thấy dữ liệu.
+Nguồn trong dự án: main_web.py
+SQL mẫu:
+SELECT symbol
+FROM stock.features_all
+GROUP BY symbol
+ORDER BY symbol;
+Bài 15. Lấy các ngày có feature cho một symbol
+Đề bài: Lấy danh sách ngày giao dịch mới nhất có feature của mã FPT.
+Ý nghĩa: Dùng để web chỉ cho người dùng chọn ngày có dữ liệu thật thay vì chọn ngày hiện tại nhưng chưa có feature.
+Nguồn trong dự án: main_web.py, models/model2/streamlit_model2_demo.py
+SQL mẫu:
+SELECT DISTINCT toDate(trading_date) AS trading_date
+FROM stock.features_all
+WHERE upper(trim(symbol)) = upper(trim('FPT'))
+ORDER BY trading_date DESC
+LIMIT 2000;
+Bài 16. Lấy một dòng feature để dự đoán
+Đề bài: Lấy đúng một dòng feature của một mã và một ngày cụ thể.
+Ý nghĩa: Đây là truy vấn đầu vào cho demo Model 1 và Model 2 khi bấm nút dự đoán.
+Nguồn trong dự án: main_web.py, models/model2/streamlit_model2_demo.py
+SQL mẫu:
+SELECT *
+FROM stock.features_all
+WHERE upper(trim(symbol)) = upper(trim('FPT'))
+  AND toDate(trading_date) = toDate('2024-05-20')
+LIMIT 1;
+Bài 17. Lấy dữ liệu một ngày cho Model 3
+Đề bài: Lấy toàn bộ mã cổ phiếu có feature trong một ngày giao dịch.
+Ý nghĩa: Model 3 dự đoán BUY/HOLD/SELL cho nhiều mã cùng ngày nên cần batch theo ngày.
+Nguồn trong dự án: models/model3/test.py, main_web.py
+SQL mẫu:
+SELECT *
+FROM stock.features_all
+WHERE toDate(trading_date) = toDate('2026-06-04');
+Bài 18. Tính return thực tế sau 5 phiên
+Đề bài: Lấy giá đóng cửa phiên hiện tại và 5 phiên sau của một mã.
+Ý nghĩa: Dùng trong demo Model 2 để so sánh predicted future_return_5d với kết quả thực tế khi đủ dữ liệu tương lai.
+Nguồn trong dự án: models/model2/streamlit_model2_demo.py
+SQL mẫu:
+SELECT
+    trading_date,
+    close
+FROM stock.features_all
+WHERE upper(trim(symbol)) = upper(trim('FPT'))
+  AND toDate(trading_date) >= toDate('2024-05-20')
+ORDER BY trading_date ASC
+LIMIT 6;
+
+===============================
+D. Dashboard và tra cứu dữ liệu
+===============================
+Bài 19. Tổng quan số dòng, số mã và khoảng thời gian dữ liệu
+Đề bài: Tính tổng số bản ghi giá, số mã cổ phiếu và ngày đầu/cuối của dữ liệu.
+Ý nghĩa: Hiển thị card tổng quan trên dashboard để biết quy mô dữ liệu hệ thống.
+Nguồn trong dự án: main_web.py
+SQL mẫu:
+SELECT
+    count() AS total_rows,
+    countDistinct(symbol) AS total_symbols,
+    min(toDate(date)) AS min_date,
+    max(toDate(date)) AS max_date
+FROM stock.stock_prices;
+Bài 20. Đếm số ngành/lĩnh vực
+Đề bài: Đếm số ngành khác nhau trong bảng stock_symbols.
+Ý nghĩa: Cho biết độ phủ ngành của bộ dữ liệu cổ phiếu.
+Nguồn trong dự án: main_web.py
+SQL mẫu:
+SELECT countDistinct(sector) AS sector_count
+FROM stock.stock_symbols
+WHERE sector IS NOT NULL AND sector != '';
+Bài 21. Đếm số dòng feature
+Đề bài: Đếm số bản ghi đã được feature engineering.
+Ý nghĩa: So sánh với số dòng giá gốc để kiểm tra feature store đã được tạo đầy đủ hay chưa.
+Nguồn trong dự án: main_web.py
+SQL mẫu:
+SELECT count() AS feature_rows
+FROM stock.features_all;
+Bài 22. Biểu đồ thanh khoản và giá trung bình theo ngày
+Đề bài: Tính tổng volume và giá đóng cửa trung bình mỗi ngày trong 180 ngày gần nhất.
+Ý nghĩa: Phục vụ biểu đồ tổng quan VN market trên dashboard.
+Nguồn trong dự án: main_web.py
+SQL mẫu:
+SELECT
+    toDate(date) AS trading_date,
+    sum(volume) AS total_volume,
+    avg(close) AS avg_close
+FROM stock.stock_prices
+GROUP BY trading_date
+ORDER BY trading_date DESC
+LIMIT 180;
+Bài 23. Top cổ phiếu có volume cao nhất phiên mới nhất
+Đề bài: Lấy 15 mã có tổng volume cao nhất ở ngày giao dịch mới nhất trong bảng giá.
+Ý nghĩa: Cho biết các mã thanh khoản cao nhất ở phiên mới nhất để làm insight nhanh.
+Nguồn trong dự án: main_web.py
+SQL mẫu:
+SELECT
+    symbol,
+    sum(volume) AS total_volume,
+    avg(close) AS avg_close
+FROM stock.stock_prices
+WHERE toDate(date) = (
+    SELECT max(toDate(date))
+    FROM stock.stock_prices
+)
+GROUP BY symbol
+ORDER BY total_volume DESC
+LIMIT 15;
+Bài 24. Tra cứu OHLCV theo symbol và khoảng ngày
+Đề bài: Lấy dữ liệu OHLCV của FPT trong một khoảng thời gian.
+Ý nghĩa: Đây là chức năng tra cứu dữ liệu cổ phiếu từ CSDL trên trang web.
+Nguồn trong dự án: main_web.py
+SQL mẫu:
+SELECT
+    toDate(date) AS trading_date,
+    symbol,
+    open,
+    high,
+    low,
+    close,
+    volume
+FROM stock.stock_prices
+WHERE symbol = 'FPT'
+  AND toDate(date) BETWEEN toDate('2024-01-01') AND toDate('2024-12-31')
+ORDER BY trading_date DESC
+LIMIT 500;
+Bài 25. Preview feature theo symbol và khoảng ngày
+Đề bài: Lấy dữ liệu features_all của một mã trong khoảng ngày để xem các feature kỹ thuật.
+Ý nghĩa: Phục vụ trang Feature Engineering: người dùng thấy feature được tạo thêm từ OHLCV như thế nào.
+Nguồn trong dự án: main_web.py
+SQL mẫu:
+SELECT *
+FROM stock.features_all
+WHERE symbol = 'FPT'
+  AND toDate(trading_date) BETWEEN toDate('2024-01-01') AND toDate('2024-12-31')
+ORDER BY trading_date DESC
+LIMIT 500;
+
+===========================
+E. Insight từ feature store
+===========================
+Bài 26. Tìm ngày feature mới nhất
+Đề bài: Lấy ngày giao dịch mới nhất có dữ liệu feature.
+Ý nghĩa: Các insight top tăng/top giảm/top volume đều chạy trên ngày feature mới nhất để tránh dùng dữ liệu cũ.
+Nguồn trong dự án: main_web.py
+SQL mẫu:
+SELECT max(toDate(trading_date)) AS latest_date
+FROM stock.features_all;
+Bài 27. Top cổ phiếu tăng mạnh nhất theo return_5d
+Đề bài: Lấy 10 mã có return_5d cao nhất ở ngày feature mới nhất.
+Ý nghĩa: Insight tìm các cổ phiếu tăng mạnh nhất trong 5 phiên gần đây.
+Nguồn trong dự án: main_web.py
+SQL mẫu:
+SELECT symbol, close, return_5d
+FROM stock.features_all
+WHERE toDate(trading_date) = (
+    SELECT max(toDate(trading_date))
+    FROM stock.features_all
+)
+  AND return_5d IS NOT NULL
+ORDER BY return_5d DESC
+LIMIT 10;
+Bài 28. Top cổ phiếu giảm mạnh nhất theo return_5d
+Đề bài: Lấy 10 mã có return_5d thấp nhất ở ngày feature mới nhất.
+Ý nghĩa: Insight tìm các cổ phiếu giảm mạnh nhất trong 5 phiên gần đây.
+Nguồn trong dự án: main_web.py
+SQL mẫu:
+SELECT symbol, close, return_5d
+FROM stock.features_all
+WHERE toDate(trading_date) = (
+    SELECT max(toDate(trading_date))
+    FROM stock.features_all
+)
+  AND return_5d IS NOT NULL
+ORDER BY return_5d ASC
+LIMIT 10;
+Bài 29. Top cổ phiếu thanh khoản cao nhất từ features_all
+Đề bài: Lấy 10 mã có volume lớn nhất ở ngày feature mới nhất.
+Ý nghĩa: Insight về thanh khoản, dùng để xem mã nào đang được giao dịch nhiều.
+Nguồn trong dự án: main_web.py
+SQL mẫu:
+SELECT symbol, close, volume
+FROM stock.features_all
+WHERE toDate(trading_date) = (
+    SELECT max(toDate(trading_date))
+    FROM stock.features_all
+)
+ORDER BY volume DESC
+LIMIT 10;
+Bài 30. Hiệu suất trung bình theo ngành
+Đề bài: Join features_all với stock_symbols để tính return_5d trung bình theo sector.
+Ý nghĩa: Cho biết ngành nào có hiệu suất tốt nhất trong giai đoạn gần nhất.
+Nguồn trong dự án: main_web.py
+SQL mẫu:
+SELECT
+    coalesce(s.sector, 'UNKNOWN') AS sector,
+    avg(f.return_5d) AS avg_return_5d,
+    count() AS stock_count
+FROM stock.features_all AS f
+LEFT JOIN stock.stock_symbols AS s
+    ON f.symbol = s.symbol
+WHERE toDate(f.trading_date) = (
+    SELECT max(toDate(trading_date))
+    FROM stock.features_all
+)
+  AND f.return_5d IS NOT NULL
+GROUP BY sector
+ORDER BY avg_return_5d DESC
+LIMIT 15;
+Bài 31. Cổ phiếu biến động mạnh nhất
+Đề bài: Lấy 10 mã có volatility_20d cao nhất, ưu tiên thêm abs(return_5d).
+Ý nghĩa: Tìm các mã rủi ro/biến động mạnh để đưa vào trang Insight hoặc Risk.
+Nguồn trong dự án: main_web.py
+SQL mẫu:
+SELECT
+    symbol,
+    close,
+    volatility_20d,
+    abs(return_5d) AS abs_return_5d
+FROM stock.features_all
+WHERE toDate(trading_date) = (
+    SELECT max(toDate(trading_date))
+    FROM stock.features_all
+)
+ORDER BY volatility_20d DESC, abs_return_5d DESC
+LIMIT 10;
+
+==============================
+F. Kiểm tra chất lượng dữ liệu
+==============================
+Bài 32. Tổng hợp lỗi chất lượng dữ liệu OHLCV
+Đề bài: Đếm tổng dòng, số mã, khoảng ngày và các lỗi giá/volume/OHLC/trùng khóa.
+Ý nghĩa: Trang Chất lượng dữ liệu dùng truy vấn này để chứng minh dữ liệu đã được kiểm soát trước khi train model.
+Nguồn trong dự án: main_web.py
+SQL mẫu:
+SELECT
+    count() AS total_rows,
+    countDistinct(symbol) AS total_symbols,
+    min(toDate(date)) AS min_date,
+    max(toDate(date)) AS max_date,
+    countIf(open <= 0 OR high <= 0 OR low <= 0 OR close <= 0) AS non_positive_prices,
+    countIf(volume < 0) AS negative_volume,
+    countIf(
+        high < low
+        OR high < open
+        OR high < close
+        OR low > open
+        OR low > close
+    ) AS invalid_ohlc,
+    count() - uniqExact(tuple(symbol, date)) AS duplicate_symbol_date
+FROM stock.stock_prices;
+Bài 33. Liệt kê dòng trùng symbol-date
+Đề bài: Tìm các cặp symbol-date có nhiều hơn một bản ghi.
+Ý nghĩa: Bài tập mở rộng từ metric duplicate_symbol_date để nhóm biết cách điều tra lỗi trùng khóa.
+Nguồn trong dự án: Suy ra từ main_web.py quality check
+SQL mẫu:
+SELECT
+    symbol,
+    toDate(date) AS trading_date,
+    count() AS row_count
+FROM stock.stock_prices
+GROUP BY symbol, trading_date
+HAVING row_count > 1
+ORDER BY row_count DESC, symbol, trading_date;
+Bài 34. Liệt kê bản ghi OHLC bất hợp lệ
+Đề bài: Lấy các dòng có high/low/open/close không nhất quán.
+Ý nghĩa: Dùng để debug dữ liệu bẩn thay vì chỉ nhìn số lượng lỗi tổng hợp.
+Nguồn trong dự án: Suy ra từ main_web.py quality check
+SQL mẫu:
+SELECT
+    symbol,
+    date,
+    open,
+    high,
+    low,
+    close,
+    volume
+FROM stock.stock_prices
+WHERE high < low
+   OR high < open
+   OR high < close
+   OR low > open
+   OR low > close
+ORDER BY date DESC, symbol
+LIMIT 200;
+
+========================
+G. Data mart cho Model 1
+========================
+Bài 35. Tạo database stock_mart
+Đề bài: Tạo database lưu kết quả dự đoán, backtest, metric và insight của các model.
+Ý nghĩa: Tách dữ liệu phục vụ phân tích khỏi bảng nguồn stock.
+Nguồn trong dự án: models/model1/src/marts.py, docs/clickhouse_schema_proposal.sql
+SQL mẫu:
+CREATE DATABASE IF NOT EXISTS stock_mart;
+Bài 36. Tạo mart dự báo giá Model 1
+Đề bài: Tạo bảng lưu dự báo giá/return của Model 1 theo từng symbol và prediction_date.
+Ý nghĩa: Lưu kết quả Model 1 để dashboard hoặc báo cáo so sánh predicted_close với real_close.
+Nguồn trong dự án: models/model1/src/marts.py
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock_mart.mart_model1_price_forecast
+(
+    model_run_id UUID,
+    prediction_date Date,
+    target_date Nullable(Date),
+    symbol String,
+    current_close Nullable(Float64),
+    real_close Nullable(Float64),
+    predicted_close Nullable(Float64),
+    actual_return Nullable(Float64),
+    predicted_return Nullable(Float64),
+    direction_correct Nullable(UInt8),
+    model_name String,
+    created_at DateTime
+)
+ENGINE = MergeTree
+ORDER BY (symbol, prediction_date, model_run_id);
+Bài 37. Tạo mart top expected return Model 1
+Đề bài: Tạo bảng lưu top mã có predicted_return cao nhất theo từng ngày dự đoán.
+Ý nghĩa: Dùng để tạo insight như: hôm nay Model 1 đánh giá mã nào có kỳ vọng tăng tốt nhất.
+Nguồn trong dự án: models/model1/src/marts.py
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock_mart.mart_model1_top_expected_return
+(
+    model_run_id UUID,
+    prediction_date Date,
+    rank UInt16,
+    symbol String,
+    current_close Nullable(Float64),
+    predicted_close Nullable(Float64),
+    actual_return Nullable(Float64),
+    predicted_return Nullable(Float64),
+    direction_correct Nullable(UInt8),
+    model_name String,
+    created_at DateTime
+)
+ENGINE = MergeTree
+ORDER BY (prediction_date, rank, symbol, model_run_id);
+Bài 38. Tạo mart backtest daily Model 1
+Đề bài: Tạo bảng lưu hiệu quả backtest theo từng ngày giao dịch.
+Ý nghĩa: Giúp đánh giá chiến lược chọn cổ phiếu theo Model 1 qua thời gian, gồm return, benchmark và cumulative return.
+Nguồn trong dự án: models/model1/src/marts.py
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock_mart.mart_model1_backtest_daily
+(
+    model_run_id UUID,
+    trading_date Date,
+    selected_symbols String,
+    selected_count UInt16,
+    daily_return Nullable(Float64),
+    benchmark_return Nullable(Float64),
+    avg_predicted_return Nullable(Float64),
+    daily_cost_rate Nullable(Float64),
+    daily_return_net Nullable(Float64),
+    cumulative_return Nullable(Float64),
+    cumulative_return_net Nullable(Float64),
+    benchmark_cumulative_return Nullable(Float64),
+    model_name String,
+    created_at DateTime
+)
+ENGINE = MergeTree
+ORDER BY (trading_date, model_run_id);
+Bài 39. Tạo mart metric Model 1
+Đề bài: Tạo bảng lưu các chỉ số đánh giá model và backtest.
+Ý nghĩa: Chuẩn hóa metric để so sánh giữa các lần chạy mô hình.
+Nguồn trong dự án: models/model1/src/marts.py
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock_mart.mart_model1_metrics
+(
+    model_run_id UUID,
+    run_date Date,
+    metric_scope String,
+    metric_name String,
+    metric_value Nullable(Float64),
+    model_name String,
+    created_at DateTime
+)
+ENGINE = MergeTree
+ORDER BY (model_name, run_date, metric_scope, metric_name, model_run_id);
+Bài 40. Tạo mart daily insights
+Đề bài: Tạo bảng lưu insight dạng title/message sinh ra từ kết quả model.
+Ý nghĩa: Lớp mart này giúp web hoặc báo cáo đọc insight trực tiếp mà không cần tự diễn giải lại metric.
+Nguồn trong dự án: models/model1/src/marts.py
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock_mart.daily_insights
+(
+    model_run_id UUID,
+    insight_date Date,
+    insight_type String,
+    source_model Nullable(String),
+    symbol Nullable(String),
+    sector Nullable(String),
+    severity String,
+    metric_name String,
+    metric_value Nullable(Float64),
+    title String,
+    message String,
+    created_at DateTime
+)
+ENGINE = MergeTree
+ORDER BY (insight_date, insight_type, model_run_id);
+
+=================================
+H. Mart và truy vấn cho Model 2-4
+=================================
+Bài 41. Tạo mart dự đoán future_return_5d của Model 2
+Đề bài: Tạo bảng lưu actual/predicted future_return_5d, sai số và tín hiệu diễn giải.
+Ý nghĩa: Model 2 tập trung dự đoán lợi suất 5 ngày tới, bảng này giúp kiểm tra sai số và tín hiệu tăng/giảm.
+Nguồn trong dự án: models/model2/src/create_mart.py
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock_mart.mart_future_return_prediction
+(
+    symbol String,
+    trading_date Date,
+    close Float64,
+    volume Float64,
+    encode_sector Float64,
+    actual_future_return_5d Float64,
+    predicted_future_return_5d Float64,
+    prediction_error Float64,
+    abs_error Float64,
+    signal String,
+    model_name String,
+    created_at DateTime DEFAULT now()
+)
+ENGINE = MergeTree
+ORDER BY (trading_date, symbol);
+Bài 42. Tạo mart tín hiệu BUY/HOLD/SELL của Model 3
+Đề bài: Thiết kế bảng lưu predicted_signal, xác suất từng lớp và độ tự tin của Model 3.
+Ý nghĩa: Model 3 là mô hình phân loại tín hiệu giao dịch, cần lưu cả label và xác suất để lọc theo confidence.
+Nguồn trong dự án: docs/clickhouse_schema_proposal.sql, models/model3/test.py
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock_mart.mart_model3_trade_signal
+(
+    model_run_id UUID,
+    trading_date Date,
+    symbol String,
+    predicted_signal String,
+    adjusted_signal String,
+    sell_probability Nullable(Float64),
+    hold_probability Nullable(Float64),
+    buy_probability Nullable(Float64),
+    signal_confidence Nullable(Float64),
+    buy_sell_margin Nullable(Float64),
+    actual_signal Nullable(String),
+    is_correct Nullable(UInt8),
+    model_name String DEFAULT 'model3',
+    created_at DateTime DEFAULT now()
+)
+ENGINE = MergeTree
+ORDER BY (symbol, trading_date, model_run_id);
+Bài 43. Lọc 100 mã ổn định và thanh khoản tốt cho benchmark
+Đề bài: Tìm 100 mã có ít nhất 2000 ngày giao dịch và volume trung bình cao nhất.
+Ý nghĩa: Model 4 dùng nhóm mã này như benchmark gần với VN100 thay vì hardcode danh sách.
+Nguồn trong dự án: models/model4/benchmark_features.py
+SQL mẫu:
+SELECT
+    symbol,
+    COUNT(*) AS so_ngay_giao_dich,
+    AVG(volume) AS volume_trung_binh
+FROM stock.stock_prices
+GROUP BY symbol
+HAVING so_ngay_giao_dich >= 2000
+ORDER BY volume_trung_binh DESC
+LIMIT 100;
+Bài 44. Đọc giá cho danh sách symbol benchmark
+Đề bài: Lấy OHLCV của một nhóm symbol đã chọn để tính benchmark và label outperform.
+Ý nghĩa: Dùng cho Model 4 để tính return cổ phiếu so với return trung bình benchmark.
+Nguồn trong dự án: models/model4/benchmark_features.py
+SQL mẫu:
+SELECT
+    symbol,
+    date AS trading_date,
+    open,
+    high,
+    low,
+    close,
+    volume
+FROM stock.stock_prices
+WHERE symbol IN ('FPT', 'HPG', 'VNM')
+ORDER BY symbol, trading_date;
+Bài 45. Tạo bảng predictions cho Model 4
+Đề bài: Tạo bảng lưu dự đoán outperform benchmark của Model 4.
+Ý nghĩa: Model 4 trả về xác suất một mã có outperform benchmark hay không, cần lưu để đánh giá accuracy.
+Nguồn trong dự án: models/model4/upload_predictions.py
+SQL mẫu:
+CREATE DATABASE IF NOT EXISTS stock;
+
+CREATE TABLE IF NOT EXISTS stock.model4_benchmark_predictions
+(
+    symbol String,
+    trading_date DateTime,
+    close Float64,
+    label Int8,
+    predicted_label Int8,
+    outperform_probability Float64,
+    prediction_correct UInt8,
+    created_at DateTime
+)
+ENGINE = MergeTree
+ORDER BY (symbol, trading_date);
+Bài 46. Replace dữ liệu prediction Model 4
+Đề bài: Xóa dữ liệu cũ trong bảng prediction Model 4 trước khi upload lại.
+Ý nghĩa: Đảm bảo bảng chỉ chứa kết quả prediction mới nhất của lần chạy hiện tại.
+Nguồn trong dự án: models/model4/upload_predictions.py
+SQL mẫu:
+TRUNCATE TABLE IF EXISTS stock.model4_benchmark_predictions;
+Bài 47. Kiểm tra kết quả upload Model 4
+Đề bài: Tính số dòng, số mã, khoảng thời gian, xác suất trung bình và accuracy của bảng Model 4.
+Ý nghĩa: Bước verify sau upload để biết dữ liệu đã lên ClickHouse đủ và metric cơ bản có hợp lý không.
+Nguồn trong dự án: models/model4/upload_predictions.py
+SQL mẫu:
+SELECT
+    COUNT(*) AS total_rows,
+    COUNT(DISTINCT symbol) AS total_symbols,
+    MIN(trading_date) AS date_from,
+    MAX(trading_date) AS date_to,
+    AVG(outperform_probability) AS avg_probability,
+    SUM(prediction_correct) * 100.0 / COUNT(*) AS accuracy_pct
+FROM stock.model4_benchmark_predictions;
+
+========================
+I. Risk mart cho Model 5
+========================
+Bài 48. Tạo bảng risk features
+Đề bài: Tạo bảng lưu feature phục vụ mô hình rủi ro Model 5.
+Ý nghĩa: Bảng này mở rộng features_all bằng target future_return_5d và risk_drop_label để train/evaluate risk model.
+Nguồn trong dự án: models/model5/risk_features.py, models/model5/upload_outputs_to_clickhouse.py
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock.dw_stock_risk_features
+(
+    trading_date Date,
+    symbol String,
+    encode_sector Nullable(Int32),
+    open Nullable(Float64),
+    high Nullable(Float64),
+    low Nullable(Float64),
+    close Nullable(Float64),
+    volume Nullable(Float64),
+    return_1d Nullable(Float64),
+    return_3d Nullable(Float64),
+    return_5d Nullable(Float64),
+    return_10d Nullable(Float64),
+    return_20d Nullable(Float64),
+    ma_5 Nullable(Float64),
+    ma_20 Nullable(Float64),
+    ma_50 Nullable(Float64),
+    volatility_5d Nullable(Float64),
+    volatility_20d Nullable(Float64),
+    drawdown_20d Nullable(Float64),
+    volume_ratio_5_20 Nullable(Float64),
+    daily_range Nullable(Float64),
+    close_position Nullable(Float64),
+    future_return_5d Nullable(Float64),
+    risk_drop_label Nullable(UInt8),
+    created_at DateTime
+)
+ENGINE = MergeTree
+ORDER BY (symbol, trading_date);
+Bài 49. Tạo bảng risk predictions
+Đề bài: Tạo bảng lưu xác suất rủi ro và nhãn rủi ro của Model 5.
+Ý nghĩa: Đây là đầu ra cốt lõi của Model 5: mỗi symbol/ngày có risk_probability và risk_label.
+Nguồn trong dự án: models/model5/upload_outputs_to_clickhouse.py
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock_mart_model5_risk_prediction.risk_predictions
+(
+    prediction_date Date,
+    target_date Date,
+    symbol String,
+    model_name String,
+    risk_probability Nullable(Float64),
+    risk_label String,
+    created_at DateTime
+)
+ENGINE = MergeTree
+ORDER BY (symbol, prediction_date, model_name);
+Bài 50. Tạo bảng đánh giá risk predictions
+Đề bài: Tạo bảng lưu kết quả so sánh nhãn rủi ro dự đoán với nhãn thực tế.
+Ý nghĩa: Giúp đánh giá Model 5 theo từng dòng: dự đoán đúng/sai và percentage_accuracy.
+Nguồn trong dự án: models/model5/upload_outputs_to_clickhouse.py
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock_mart_model5_risk_prediction.risk_test_evaluation
+(
+    prediction_date Date,
+    target_date Date,
+    symbol String,
+    model_name String,
+    real_close_prediction_date Nullable(Float64),
+    real_close_target_date Nullable(Float64),
+    actual_future_return_5d Nullable(Float64),
+    actual_risk_drop_label Nullable(UInt8),
+    actual_risk_label String,
+    risk_probability Nullable(Float64),
+    predicted_risk_label String,
+    prediction_correct UInt8,
+    percentage_accuracy Nullable(Float64),
+    created_at DateTime
+)
+ENGINE = MergeTree
+ORDER BY (symbol, prediction_date, model_name);
+Bài 51. Bổ sung cột còn thiếu khi schema thay đổi
+Đề bài: Dùng ALTER TABLE để thêm cột mới nếu bảng risk_predictions chưa có.
+Ý nghĩa: Giúp pipeline upload Model 5 nâng cấp schema mà không phải xóa bảng thủ công.
+Nguồn trong dự án: models/model5/upload_outputs_to_clickhouse.py
+SQL mẫu:
+ALTER TABLE stock_mart_model5_risk_prediction.risk_predictions
+ADD COLUMN IF NOT EXISTS risk_label String;
+Bài 52. Tạo view mart_risk_alerts
+Đề bài: Tạo view join risk_predictions với risk_features và thông tin công ty.
+Ý nghĩa: View này gom đủ thông tin để dashboard risk hiển thị xác suất rủi ro kèm giá, volume và feature liên quan.
+Nguồn trong dự án: models/model5/create_risk_mart.py
+SQL mẫu:
+CREATE OR REPLACE VIEW stock.mart_risk_alerts AS
+SELECT
+    p.prediction_date AS prediction_date,
+    p.target_date AS target_date,
+    p.symbol AS symbol,
+    f.open AS open,
+    f.high AS high,
+    f.low AS low,
+    f.close AS close,
+    f.volume AS volume,
+    s.company_name AS company_name,
+    f.return_5d AS return_5d,
+    f.drawdown_20d AS drawdown_20d,
+    f.volatility_5d AS volatility_5d,
+    f.volume_ratio_5_20 AS volume_ratio_5_20,
+    f.daily_range AS daily_range,
+    f.close_position AS close_position,
+    p.risk_probability AS risk_probability,
+    p.risk_label AS risk_label,
+    p.model_name AS model_name
+FROM stock.dw_stock_risk_predictions AS p
+LEFT JOIN stock.dw_stock_risk_features AS f
+    ON p.symbol = f.symbol
+    AND p.prediction_date = f.trading_date
+LEFT JOIN stock.dw_stock_symbols AS s
+    ON p.symbol = s.symbol;
+Bài 53. Tạo view dashboard_risk_alerts
+Đề bài: Tạo view rút gọn từ mart_risk_alerts chỉ giữ các cột cần cho dashboard.
+Ý nghĩa: Tách view phục vụ giao diện khỏi view mart đầy đủ, giúp dashboard đọc nhanh và ổn định hơn.
+Nguồn trong dự án: models/model5/upload_outputs_to_clickhouse.py
+SQL mẫu:
+CREATE OR REPLACE VIEW stock_mart_model5_risk_prediction.dashboard_risk_alerts AS
+SELECT
+    prediction_date,
+    target_date,
+    symbol,
+    company_name,
+    close,
+    return_5d,
+    drawdown_20d,
+    volatility_5d,
+    volume_ratio_5_20,
+    daily_range,
+    close_position,
+    risk_probability,
+    risk_label,
+    model_name
+FROM stock_mart_model5_risk_prediction.mart_risk_alerts;
+
+============================================
+J. Schema đề xuất staging, DW, mart và audit
+============================================
+Bài 54. Tạo các database phân lớp dữ liệu
+Đề bài: Tạo 4 database theo kiến trúc staging, data warehouse, data mart và audit.
+Ý nghĩa: Đây là thiết kế nâng cấp trong docs để hệ thống rõ tầng dữ liệu hơn thay vì dồn toàn bộ vào stock.
+Nguồn trong dự án: docs/clickhouse_schema_proposal.sql
+SQL mẫu:
+CREATE DATABASE IF NOT EXISTS stock_staging;
+CREATE DATABASE IF NOT EXISTS stock_dw;
+CREATE DATABASE IF NOT EXISTS stock_mart;
+CREATE DATABASE IF NOT EXISTS stock_audit;
+Bài 55. Tạo bảng raw_daily_prices ở staging
+Đề bài: Tạo bảng nhận dữ liệu giá thô kèm source_file, checksum và thời điểm ingest.
+Ý nghĩa: Staging giữ dữ liệu đầu vào để trace lại file nguồn, phục vụ audit và xử lý dữ liệu bẩn.
+Nguồn trong dự án: docs/clickhouse_schema_proposal.sql
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock_staging.raw_daily_prices
+(
+    time Nullable(DateTime),
+    open Nullable(Float64),
+    high Nullable(Float64),
+    low Nullable(Float64),
+    close Nullable(Float64),
+    volume Nullable(Float64),
+    ticker Nullable(String),
+    symbol String,
+    target_date Date,
+    source_file String,
+    file_checksum Nullable(String),
+    ingested_at DateTime DEFAULT now()
+)
+ENGINE = MergeTree
+ORDER BY (symbol, target_date, source_file);
+Bài 56. Tạo bảng fact_stock_prices ở data warehouse
+Đề bài: Tạo bảng fact chuẩn hóa OHLCV theo symbol và trading_date.
+Ý nghĩa: Đây là phiên bản DW sạch hơn của stock.stock_prices, phù hợp làm nguồn chuẩn cho phân tích.
+Nguồn trong dự án: docs/clickhouse_schema_proposal.sql
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock_dw.fact_stock_prices
+(
+    symbol String,
+    trading_date Date,
+    open Float64,
+    high Float64,
+    low Float64,
+    close Float64,
+    volume Float64,
+    created_at DateTime DEFAULT now()
+)
+ENGINE = MergeTree
+ORDER BY (symbol, trading_date);
+Bài 57. Tạo bảng model_runs dùng chung
+Đề bài: Tạo bảng lưu metadata của mỗi lần chạy mô hình.
+Ý nghĩa: Mỗi mart model có thể liên kết về model_run_id để biết model nào chạy lúc nào, train/test bao nhiêu dòng, trạng thái ra sao.
+Nguồn trong dự án: docs/clickhouse_schema_proposal.sql
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock_mart.model_runs
+(
+    model_run_id UUID,
+    model_name String,
+    run_type String,
+    started_at DateTime,
+    finished_at Nullable(DateTime),
+    train_start_date Nullable(Date),
+    train_end_date Nullable(Date),
+    test_start_date Nullable(Date),
+    test_end_date Nullable(Date),
+    train_rows Nullable(UInt64),
+    test_rows Nullable(UInt64),
+    status String,
+    artifact_dir Nullable(String),
+    created_at DateTime DEFAULT now()
+)
+ENGINE = MergeTree
+ORDER BY (model_name, created_at, model_run_id);
+Bài 58. Tạo bảng audit pipeline_runs
+Đề bài: Tạo bảng lưu trạng thái mỗi lần workflow/pipeline chạy.
+Ý nghĩa: Phục vụ audit hệ thống: biết workflow nào chạy, bắt đầu/kết thúc lúc nào, bao nhiêu dòng được xử lý và lỗi gì.
+Nguồn trong dự án: docs/clickhouse_schema_proposal.sql
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock_audit.pipeline_runs
+(
+    pipeline_run_id UUID,
+    workflow_name String,
+    run_source String,
+    status String,
+    started_at DateTime,
+    finished_at Nullable(DateTime),
+    input_date Nullable(Date),
+    rows_raw Nullable(UInt64),
+    rows_clean Nullable(UInt64),
+    rows_uploaded Nullable(UInt64),
+    completed_models Array(String),
+    error_message Nullable(String)
+)
+ENGINE = MergeTree
+ORDER BY (workflow_name, started_at, pipeline_run_id);
+Bài 59. Tạo bảng audit data_quality_summary
+Đề bài: Tạo bảng lưu kết quả kiểm tra chất lượng dữ liệu theo từng pipeline_run_id.
+Ý nghĩa: Khi data quality chạy tự động, bảng này lưu check_name, bad_rows, total_rows và bad_ratio để theo dõi lịch sử.
+Nguồn trong dự án: docs/clickhouse_schema_proposal.sql
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock_audit.data_quality_summary
+(
+    pipeline_run_id UUID,
+    check_name String,
+    status String,
+    bad_rows Nullable(UInt64),
+    total_rows Nullable(UInt64),
+    bad_ratio Nullable(Float64),
+    report_file Nullable(String),
+    created_at DateTime DEFAULT now()
+)
+ENGINE = MergeTree
+ORDER BY (pipeline_run_id, check_name);
+
+=====================================
+K. Upload tổng hợp và quản trị schema
+=====================================
+Bài 60. Tạo bảng động từ schema suy luận
+Đề bài: Tạo bảng ClickHouse với schema và khóa sắp xếp được suy luận từ file CSV/parquet.
+Ý nghĩa: upload_all.py dùng mẫu này để đẩy nhiều output của dự án lên ClickHouse mà không phải hardcode từng bảng.
+Nguồn trong dự án: upload_all.py
+SQL mẫu:
+DROP TABLE IF EXISTS stock_mart.some_output_table;
+
+CREATE TABLE IF NOT EXISTS stock_mart.some_output_table
+(
+    `symbol` String,
+    `trading_date` Date,
+    `metric_value` Nullable(Float64),
+    `created_at` DateTime
+)
+ENGINE = MergeTree
+PRIMARY KEY (`symbol`, `trading_date`)
+ORDER BY (`symbol`, `trading_date`);
+Bài 61. Ghi nhận quan hệ logic giữa các bảng
+Đề bài: Thiết kế bảng metadata mô tả logical foreign key giữa các bảng mart/DW.
+Ý nghĩa: ClickHouse không enforce foreign key, nên dự án ghi lại quan hệ logic để nhóm hiểu bảng nào liên kết với bảng nào.
+Nguồn trong dự án: upload_all.py
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock_mart.table_relationships
+(
+    upload_run_id UUID,
+    from_table String,
+    from_column String,
+    to_table String,
+    to_column String,
+    relationship_type String,
+    note String,
+    created_at DateTime
+)
+ENGINE = MergeTree
+ORDER BY (from_table, to_table, created_at);
+Bài 62. Ghi nhận khóa sắp xếp/chính logic của từng bảng
+Đề bài: Thiết kế bảng metadata lưu key_columns của từng bảng được upload.
+Ý nghĩa: Giúp người mới nhìn nhanh biết nên lọc/order theo cột nào khi truy vấn từng bảng.
+Nguồn trong dự án: upload_all.py
+SQL mẫu:
+CREATE TABLE IF NOT EXISTS stock_mart.table_keys
+(
+    upload_run_id UUID,
+    table_name String,
+    layer String,
+    key_type String,
+    key_columns String,
+    description String,
+    created_at DateTime
+)
+ENGINE = MergeTree
+ORDER BY (layer, table_name, key_type);
+Gợi ý nâng cấp bài tập
+- Thêm biến tham số cho symbol, ngày bắt đầu, ngày kết thúc để chuyển các truy vấn thành dashboard filter.
+- So sánh hiệu năng giữa GROUP BY trực tiếp trên stock_prices và đọc từ mart đã tổng hợp sẵn.
+- Thiết kế materialized view cho các insight hay dùng: top volume, sector performance, data quality summary.
+- Chuẩn hóa tên database theo kiến trúc stock_staging, stock_dw, stock_mart, stock_audit rồi cập nhật lại app/model đọc từ các tầng đó.
+- Bổ sung bài tập dùng window function ClickHouse để tự tính return_5d, moving average và volatility trực tiếp bằng SQL.

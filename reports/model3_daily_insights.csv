@@ -1,6 +1,6 @@
 insight_date,insight_type,source_model,symbol,sector,severity,metric_name,metric_value,title,message,created_at
-2026-05-27,model3,model3,,,info,adjusted_buy_count,0.0,Model3 BUY signal count,"Model3 has 0 strong BUY signals, 2 strong SELL signals, and 207 HOLD signals on 2026-05-27.",2026-06-08 20:08:44
-2026-05-27,model3,model3,UDC,3,success,buy_probability,0.5744508504867554,Top BUY probability,UDC has the highest BUY probability for Model3 on 2026-05-27.,2026-06-08 20:08:44
-2026-05-27,model3,model3,VC6,3,warning,sell_probability,0.6620638370513916,Top SELL risk,VC6 has the highest SELL probability for Model3 on 2026-05-27.,2026-06-08 20:08:44
-2026-05-27,model3,model3,,,info,accuracy,56.3360985736739,Model3 classification accuracy,Model3 test accuracy is 56.34%.,2026-06-08 20:08:44
-2026-05-27,model3,model3,,,success,cumulative_return_net,1.2601190056904827,Model3 backtest net return,Model3 top BUY backtest net cumulative return is 126.01%.,2026-06-08 20:08:44
+2026-05-27,model3,model3,,,info,adjusted_buy_count,0.0,Model3 BUY signal count,"Model3 has 0 strong BUY signals, 1 strong SELL signals, and 208 HOLD signals on 2026-05-27.",2026-06-09 14:08:38
+2026-05-27,model3,model3,GND,3,success,buy_probability,0.5952407121658325,Top BUY probability,GND has the highest BUY probability for Model3 on 2026-05-27.,2026-06-09 14:08:38
+2026-05-27,model3,model3,VC6,3,warning,sell_probability,0.655346155166626,Top SELL risk,VC6 has the highest SELL probability for Model3 on 2026-05-27.,2026-06-09 14:08:38
+2026-05-27,model3,model3,,,info,accuracy,56.730387617409704,Model3 classification accuracy,Model3 test accuracy is 56.73%.,2026-06-09 14:08:38
+2026-05-27,model3,model3,,,success,cumulative_return_net,-0.8378011687553945,Model3 backtest net return,Model3 top BUY backtest net cumulative return is -83.78%.,2026-06-09 14:08:38
