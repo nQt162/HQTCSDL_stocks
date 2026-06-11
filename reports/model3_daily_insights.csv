@@ -1,6 +1,6 @@
 insight_date,insight_type,source_model,symbol,sector,severity,metric_name,metric_value,title,message,created_at
-2026-05-28,model3,model3,,,info,adjusted_buy_count,0.0,Model3 BUY signal count,"Model3 has 0 strong BUY signals, 0 strong SELL signals, and 208 HOLD signals on 2026-05-28.",2026-06-11 18:01:27
-2026-05-28,model3,model3,EIN,12,success,buy_probability,0.5393399596214294,Top BUY probability,EIN has the highest BUY probability for Model3 on 2026-05-28.,2026-06-11 18:01:27
-2026-05-28,model3,model3,HMR,3,warning,sell_probability,0.5365516543388367,Top SELL risk,HMR has the highest SELL probability for Model3 on 2026-05-28.,2026-06-11 18:01:27
-2026-05-28,model3,model3,,,info,accuracy,56.80055561986342,Model3 classification accuracy,Model3 test accuracy is 56.80%.,2026-06-11 18:01:27
-2026-05-28,model3,model3,,,success,cumulative_return_net,-0.8277675006378497,Model3 backtest net return,Model3 top BUY backtest net cumulative return is -82.78%.,2026-06-11 18:01:27
+2026-05-28,model3,model3,,,info,adjusted_buy_count,0.0,Model3 BUY signal count,"Model3 has 0 strong BUY signals, 0 strong SELL signals, and 208 HOLD signals on 2026-05-28.",2026-06-11 18:34:50
+2026-05-28,model3,model3,EIN,12,success,buy_probability,0.5393399596214294,Top BUY probability,EIN has the highest BUY probability for Model3 on 2026-05-28.,2026-06-11 18:34:50
+2026-05-28,model3,model3,HMR,3,warning,sell_probability,0.5365516543388367,Top SELL risk,HMR has the highest SELL probability for Model3 on 2026-05-28.,2026-06-11 18:34:50
+2026-05-28,model3,model3,,,info,accuracy,56.80055561986342,Model3 classification accuracy,Model3 test accuracy is 56.80%.,2026-06-11 18:34:50
+2026-05-28,model3,model3,,,success,cumulative_return_net,-0.8277675006378497,Model3 backtest net return,Model3 top BUY backtest net cumulative return is -82.78%.,2026-06-11 18:34:50
