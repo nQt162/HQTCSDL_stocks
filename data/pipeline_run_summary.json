@@ -1,10 +1,6 @@
 {
   "status": "success",
-<<<<<<< HEAD
-  "updated_at": "2026-06-11T18:41:59+07:00",
-=======
-  "updated_at": "2026-06-10T20:01:05+07:00",
->>>>>>> 3ef3ffbbb12eb7efd04d087d7357ed68e6e3f44c
+  "updated_at": "2026-06-11T19:33:14+07:00",
   "completed_steps": [
     "merge_daily_csv_to_dirty",
     "survey_data",
