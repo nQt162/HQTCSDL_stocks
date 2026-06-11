@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 import os
 import sys
 from datetime import date
@@ -20,6 +21,8 @@ load_dotenv(ENV_PATH)
 MODEL1_DIR = PROJECT_ROOT / "models" / "model1"
 MODEL2_DIR = PROJECT_ROOT / "models" / "model2"
 MODEL3_DIR = PROJECT_ROOT / "models" / "model3"
+MODEL4_DIR = PROJECT_ROOT / "models" / "model4"
+MODEL5_DIR = PROJECT_ROOT / "models" / "model5"
 
 MODEL1_PATH = MODEL1_DIR / "models" / "price_forecasting_xgb.pkl"
 MODEL2_PATH = MODEL2_DIR / "models" / "future_return_lgbm.pkl"
@@ -628,6 +631,21 @@ def add_model_path(path: Path) -> None:
         sys.path.insert(0, str(path))
 
 
+def load_module_from_path(module_name: str, module_path: Path):
+    module_path = Path(module_path)
+    if not module_path.exists():
+        raise FileNotFoundError(f"Không tìm thấy file module: {module_path}")
+
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Không tạo được import spec cho: {module_path}")
+
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 @st.cache_resource
 def load_model1_artifact():
     if not MODEL1_PATH.exists():
@@ -956,15 +974,15 @@ def render_stock_lookup_page() -> None:
     )
     st.bar_chart(volume_chart)
 
-    if len(selected_symbols) == 1:
-        st.subheader("OHLC preview")
-        st.dataframe(
-            price_df[["trading_date", "open", "high", "low", "close", "volume"]]
-            .tail(30)
-            .sort_values("trading_date", ascending=False),
-            use_container_width=True,
-            hide_index=True,
-        )
+    # if len(selected_symbols) == 1:
+    #     st.subheader("OHLC preview")
+    #     st.dataframe(
+    #         price_df[["trading_date", "open", "high", "low", "close", "volume"]]
+    #         .tail(30)
+    #         .sort_values("trading_date", ascending=False),
+    #         use_container_width=True,
+    #         hide_index=True,
+    #     )
 
 
 def render_feature_engineering_page() -> None:
@@ -1278,6 +1296,25 @@ def render_data_mart_page() -> None:
 
 
 def render_model1_prediction() -> None:
+    os.environ["MODEL1_DASHBOARD_EMBEDDED"] = "1"
+    add_model_path(MODEL1_DIR)
+
+    try:
+        dashboard_model1 = load_module_from_path(
+            "embedded_dashboard_model1",
+            MODEL1_DIR / "test.py",
+        )
+    except Exception as exc:
+        display_error("Không tải được Streamlit Model 1.", exc)
+        st.caption(f"Kiểm tra file: {MODEL1_DIR / 'test.py'}")
+        return
+
+    try:
+        dashboard_model1.main()
+    except Exception as exc:
+        display_error("Không render được Streamlit Model 1.", exc)
+    return
+
     st.subheader("Model 1 - Dự đoán return 5 phiên và suy ra giá")
     st.caption("Logic dựa trên models/model1/test.py.")
 
@@ -1561,16 +1598,58 @@ def render_model3_prediction() -> None:
     )
 
 
+def render_model4_prediction() -> None:
+    os.environ["MODEL4_DASHBOARD_EMBEDDED"] = "1"
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+
+    try:
+        dashboard_model4 = load_module_from_path(
+            "embedded_dashboard_model4",
+            MODEL4_DIR / "dashboard_model4.py",
+        )
+    except Exception as exc:
+        display_error("Không tải được dashboard Model 4.", exc)
+        st.caption(f"Kiểm tra file: {MODEL4_DIR / 'dashboard_model4.py'}")
+        return
+
+    try:
+        dashboard_model4.main()
+    except Exception as exc:
+        display_error("Không render được dashboard Model 4.", exc)
+
+
+def render_model5_prediction() -> None:
+    os.environ["MODEL5_DASHBOARD_EMBEDDED"] = "1"
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+
+    try:
+        dashboard_model5 = load_module_from_path(
+            "embedded_dashboard_model5",
+            MODEL5_DIR / "dashboard_model5.py",
+        )
+    except Exception as exc:
+        display_error("Không tải được dashboard Model 5.", exc)
+        st.caption(f"Kiểm tra file: {MODEL5_DIR / 'dashboard_model5.py'}")
+        return
+
+    try:
+        dashboard_model5.render_dashboard(embed=True)
+    except Exception as exc:
+        display_error("Không render được dashboard Model 5.", exc)
+
+
 def render_prediction_models_page() -> None:
     st.header("Mô Hình Dự Đoán")
     model_page = st.radio(
         "Chọn mô hình",
         [
-            "Model 1 - Dự đoán return/giá",
+            "Model 1 - Future close",
             "Model 2 - Dự đoán lợi suất 5 ngày",
             "Model 3 - BUY/HOLD/SELL",
-            "Model 4 - Tạm thời bỏ trống",
-            "Model 5 - Tạm thời bỏ trống",
+            "Model 4 - Outperform benchmark",
+            "Model 5 - Risk alert",
         ],
         horizontal=True,
     )
@@ -1582,9 +1661,9 @@ def render_prediction_models_page() -> None:
     elif model_page.startswith("Model 3"):
         render_model3_prediction()
     elif model_page.startswith("Model 4"):
-        st.info("Model 4 hiện chưa có file Streamlit dự đoán riêng, nên trang này tạm thời để trống.")
+        render_model4_prediction()
     else:
-        st.info("Model 5 hiện chưa có file Streamlit dự đoán riêng, nên trang này tạm thời để trống.")
+        render_model5_prediction()
 
 
 def render_insight_page() -> None:

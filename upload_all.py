@@ -6,6 +6,7 @@ import json
 import os
 import re
 import sys
+import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -126,11 +127,40 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--append", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument(
+        "--layers",
+        default="",
+        help=(
+            "Comma-separated layers to upload: staging,warehouse,mart,audit. "
+            "Default is all layers."
+        ),
+    )
+    parser.add_argument(
         "--continue-on-error",
         action="store_true",
         help="Keep uploading other tables if one table fails.",
     )
     return parser.parse_args()
+
+
+def parse_layers(raw_layers: str) -> set[str]:
+    if not raw_layers:
+        return set()
+
+    allowed = {"staging", "warehouse", "mart", "audit"}
+    layers = {
+        layer.strip().lower()
+        for layer in str(raw_layers).split(",")
+        if layer.strip()
+    }
+    unknown = layers - allowed
+    if unknown:
+        raise ValueError(
+            "Unknown upload layers: "
+            + ", ".join(sorted(unknown))
+            + ". Allowed: "
+            + ", ".join(sorted(allowed))
+        )
+    return layers
 
 
 def get_clickhouse_client():
@@ -145,27 +175,55 @@ def get_clickhouse_client():
     port = int(os.getenv("CLICKHOUSE_PORT") or "8443")
     username = os.getenv("CLICKHOUSE_USER", os.getenv("CLICKHOUSE_USERNAME", "default"))
     password = os.getenv("CLICKHOUSE_PASSWORD", "")
+    database = os.getenv("CLICKHOUSE_DATABASE", "default")
     secure = os.getenv("CLICKHOUSE_SECURE", "true").strip().lower() in {
         "1",
         "true",
         "yes",
     }
+    connect_timeout = int(os.getenv("CLICKHOUSE_CONNECT_TIMEOUT") or "60")
+    send_receive_timeout = int(os.getenv("CLICKHOUSE_SEND_RECEIVE_TIMEOUT") or "600")
+    query_retries = int(os.getenv("CLICKHOUSE_QUERY_RETRIES") or "3")
+    client_retries = int(os.getenv("CLICKHOUSE_CLIENT_RETRIES") or "3")
+    retry_sleep_seconds = int(os.getenv("CLICKHOUSE_RETRY_SLEEP_SECONDS") or "10")
 
     if not host:
         raise ValueError("CLICKHOUSE_HOST is required in .env")
     if not password:
         raise ValueError("CLICKHOUSE_PASSWORD is required in .env")
 
-    client = clickhouse_connect.get_client(
-        host=host,
-        port=port,
-        username=username,
-        password=password,
-        database=os.getenv("CLICKHOUSE_DATABASE", "default"),
-        secure=secure,
-    )
-    print(f"[clickhouse] Connected: {host}:{port} secure={secure}")
-    return client
+    last_error = None
+    for attempt in range(1, client_retries + 1):
+        try:
+            client = clickhouse_connect.get_client(
+                host=host,
+                port=port,
+                username=username,
+                password=password,
+                database=database,
+                secure=secure,
+                connect_timeout=connect_timeout,
+                send_receive_timeout=send_receive_timeout,
+                query_retries=query_retries,
+            )
+            print(f"[clickhouse] Connected: {host}:{port} secure={secure}")
+            return client
+        except Exception as exc:
+            last_error = exc
+            if attempt >= client_retries:
+                break
+            print(
+                "[clickhouse] Connection attempt "
+                f"{attempt}/{client_retries} failed: {exc}. "
+                f"Retrying in {retry_sleep_seconds}s..."
+            )
+            time.sleep(retry_sleep_seconds)
+
+    raise RuntimeError(
+        "Cannot connect to ClickHouse after "
+        f"{client_retries} attempts. Host={host}, port={port}, "
+        f"secure={secure}, connect_timeout={connect_timeout}s"
+    ) from last_error
 
 
 def quote_identifier(name: str) -> str:
@@ -889,10 +947,19 @@ def build_table_keys(specs: list[TableSpec], upload_run_id: str, uploaded_at: pd
 def run_upload(args: argparse.Namespace) -> int:
     upload_run_id = str(uuid.uuid4())
     uploaded_at = pd.Timestamp(datetime.now().replace(microsecond=0))
-    specs = make_table_specs()
+    selected_layers = parse_layers(args.layers)
+    all_specs = make_table_specs()
+    specs = [
+        spec for spec in all_specs
+        if not selected_layers or spec.layer in selected_layers
+    ]
     manifest = []
 
     print(f"[upload_all] database={args.database}")
+    print(
+        "[upload_all] layers="
+        + (",".join(sorted(selected_layers)) if selected_layers else "all")
+    )
     print(f"[upload_all] upload_run_id={upload_run_id}")
     print(f"[upload_all] env={ENV_PATH}")
 
@@ -979,7 +1046,8 @@ def run_upload(args: argparse.Namespace) -> int:
             if not args.continue_on_error:
                 break
 
-    if not errors or args.continue_on_error:
+    upload_mart_metrics = not selected_layers or "mart" in selected_layers
+    if upload_mart_metrics and (not errors or args.continue_on_error):
         for table, df in build_metric_tables(upload_run_id, uploaded_at):
             try:
                 upload_dataframe(
@@ -995,21 +1063,23 @@ def run_upload(args: argparse.Namespace) -> int:
                 if not args.continue_on_error:
                     break
 
-    relationship_df = build_relationships(upload_run_id, uploaded_at)
-    keys_df = build_table_keys(specs, upload_run_id, uploaded_at)
-    manifest_df = pd.DataFrame(manifest)
+    upload_audit_tables = not selected_layers or "audit" in selected_layers
+    if upload_audit_tables:
+        relationship_df = build_relationships(upload_run_id, uploaded_at)
+        keys_df = build_table_keys(specs, upload_run_id, uploaded_at)
+        manifest_df = pd.DataFrame(manifest)
 
-    for table, df, order_by in [
-        ("audit_table_relationships", relationship_df, ["from_table", "from_column", "to_table"]),
-        ("audit_table_keys", keys_df, ["table_name", "key_type"]),
-        ("audit_upload_manifest", manifest_df, ["upload_run_id", "table_name"]),
-    ]:
-        try:
-            upload_dataframe(client, args.database, table, df, order_by=order_by, append=args.append)
-        except Exception as exc:
-            errors.append((table, str(exc)))
-            if not args.continue_on_error:
-                break
+        for table, df, order_by in [
+            ("audit_table_relationships", relationship_df, ["from_table", "from_column", "to_table"]),
+            ("audit_table_keys", keys_df, ["table_name", "key_type"]),
+            ("audit_upload_manifest", manifest_df, ["upload_run_id", "table_name"]),
+        ]:
+            try:
+                upload_dataframe(client, args.database, table, df, order_by=order_by, append=args.append)
+            except Exception as exc:
+                errors.append((table, str(exc)))
+                if not args.continue_on_error:
+                    break
 
     if errors:
         print("[upload_all] Finished with errors:")

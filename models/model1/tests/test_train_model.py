@@ -33,32 +33,6 @@ class TrainModelTests(unittest.TestCase):
         self.assertIs(y_val, fit_kwargs["eval_set"][0][1])
         self.assertFalse(fit_kwargs["verbose"])
 
-    def test_save_model_records_return_target_metadata(self):
-        from src.return_calibration import ReturnCalibrator
-        from src.train_model import save_model
-
-        model = object()
-        calibrator = ReturnCalibrator(slope=0.5, intercept=0.01, min_abs_signal=0.001)
-
-        with patch("src.train_model.joblib.dump") as dump:
-            save_model(
-                model=model,
-                features=["feature"],
-                horizon=5,
-                model_path="model.pkl",
-                target_type="future_return",
-                return_calibrator=calibrator,
-            )
-
-        saved, model_path = dump.call_args.args
-
-        self.assertIs(model, saved["model"])
-        self.assertEqual("future_return", saved["target_type"])
-        self.assertIs(calibrator, saved["return_calibrator"])
-        self.assertEqual(["feature"], saved["features"])
-        self.assertEqual(5, saved["horizon"])
-        self.assertEqual("model.pkl", model_path)
-
 
 if __name__ == "__main__":
     unittest.main()

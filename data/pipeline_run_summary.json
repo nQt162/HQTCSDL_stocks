@@ -1,6 +1,6 @@
 {
   "status": "success",
-  "updated_at": "2026-06-10T20:01:05+07:00",
+  "updated_at": "2026-06-11T19:33:14+07:00",
   "completed_steps": [
     "merge_daily_csv_to_dirty",
     "survey_data",
@@ -9,13 +9,13 @@
     "load_symbols",
     "upload_features_all",
     "train_model1",
-    "generate_model1_marts",
     "train_model2",
     "train_model3",
     "train_model4",
     "upload_model4_outputs",
     "train_model5",
-    "upload_model5_outputs"
+    "upload_model5_outputs",
+    "upload_all_tables"
   ],
   "failed_step": null
 }

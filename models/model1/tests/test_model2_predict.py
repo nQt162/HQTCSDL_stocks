@@ -9,9 +9,6 @@ import numpy as np
 import pandas as pd
 
 
-raise unittest.SkipTest("Model 2 predictor tests are outside the Model 1 test suite")
-
-
 MODEL2_DIR = Path(__file__).resolve().parents[1] / "model2"
 
 

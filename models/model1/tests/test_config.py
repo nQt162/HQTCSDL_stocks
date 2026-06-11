@@ -5,15 +5,11 @@ import pandas as pd
 from src.config import DATA_PATH, FEATURES
 
 
-def project_relative(path):
-    from src import config
-
-    return path.relative_to(config.PROJECT_ROOT).as_posix()
-
-
 class ConfigFeatureTests(unittest.TestCase):
-    @unittest.skipUnless(DATA_PATH.exists(), "features_all.csv is not available")
     def test_configured_features_exist_in_raw_dataset(self):
+        if not DATA_PATH.exists():
+            self.skipTest(f"Dataset is not available: {DATA_PATH}")
+
         columns = set(pd.read_csv(DATA_PATH, nrows=0).columns.str.strip())
 
         missing_features = [feature for feature in FEATURES if feature not in columns]
@@ -23,15 +19,17 @@ class ConfigFeatureTests(unittest.TestCase):
     def test_backtest_config_is_available(self):
         from src import config
 
+        expected_report_dir = config.PROJECT_ROOT / "models" / "model1" / "reports"
+
         self.assertEqual(5, config.HORIZON)
-        self.assertEqual("reports/backtest.csv", project_relative(config.BACKTEST_PATH))
+        self.assertEqual(expected_report_dir / "backtest.csv", config.BACKTEST_PATH)
         self.assertEqual(
-            "reports/backtest_metrics.json",
-            project_relative(config.BACKTEST_METRICS_PATH),
+            expected_report_dir / "backtest_metrics.json",
+            config.BACKTEST_METRICS_PATH,
         )
         self.assertEqual(
-            "reports/backtest_sweep.csv",
-            project_relative(config.BACKTEST_SWEEP_PATH),
+            expected_report_dir / "backtest_sweep.csv",
+            config.BACKTEST_SWEEP_PATH,
         )
         self.assertGreater(config.BACKTEST_TOP_K, 0)
         self.assertGreater(config.BACKTEST_MIN_VOLUME, 0)
@@ -46,34 +44,60 @@ class ConfigFeatureTests(unittest.TestCase):
             config.BACKTEST_MIN_PREDICTED_RETURN,
             config.BACKTEST_MIN_PREDICTED_RETURN_VALUES,
         )
-        self.assertEqual("future_return", config.TARGET_TYPE)
-        self.assertEqual(0.001, config.RETURN_CALIBRATION_MIN_ABS_SIGNAL)
-        self.assertEqual("mae", config.XGB_PARAMS["eval_metric"])
 
     def test_walk_forward_config_is_available(self):
         from src import config
 
+        expected_report_dir = config.PROJECT_ROOT / "models" / "model1" / "reports"
+
         self.assertEqual(
-            "reports/walk_forward_predictions.csv",
-            project_relative(config.WALK_FORWARD_PREDICTION_PATH),
+            expected_report_dir / "walk_forward_predictions.csv",
+            config.WALK_FORWARD_PREDICTION_PATH,
         )
         self.assertEqual(
-            "reports/walk_forward_fold_metrics.csv",
-            project_relative(config.WALK_FORWARD_FOLD_METRICS_PATH),
+            expected_report_dir / "walk_forward_fold_metrics.csv",
+            config.WALK_FORWARD_FOLD_METRICS_PATH,
         )
         self.assertEqual(
-            "reports/walk_forward_backtest.csv",
-            project_relative(config.WALK_FORWARD_BACKTEST_PATH),
+            expected_report_dir / "walk_forward_backtest.csv",
+            config.WALK_FORWARD_BACKTEST_PATH,
         )
         self.assertEqual(
-            "reports/walk_forward_backtest_metrics.json",
-            project_relative(config.WALK_FORWARD_BACKTEST_METRICS_PATH),
+            expected_report_dir / "walk_forward_backtest_metrics.json",
+            config.WALK_FORWARD_BACKTEST_METRICS_PATH,
         )
         self.assertGreater(config.WALK_FORWARD_INITIAL_TRAIN_RATIO, 0)
         self.assertGreater(config.WALK_FORWARD_VALIDATION_RATIO, 0)
         self.assertGreater(config.WALK_FORWARD_TEST_RATIO, 0)
         self.assertGreater(config.WALK_FORWARD_STEP_RATIO, 0)
 
+
+
+    def test_model1_mart_config_is_available(self):
+        from src import config
+
+        expected_report_dir = config.PROJECT_ROOT / "models" / "model1" / "reports"
+
+        self.assertEqual(
+            expected_report_dir / "mart_model1_price_forecast.csv",
+            config.MART_MODEL1_PRICE_FORECAST_PATH,
+        )
+        self.assertEqual(
+            expected_report_dir / "mart_model1_top_expected_return.csv",
+            config.MART_MODEL1_TOP_EXPECTED_RETURN_PATH,
+        )
+        self.assertEqual(
+            expected_report_dir / "mart_model1_backtest_daily.csv",
+            config.MART_MODEL1_BACKTEST_DAILY_PATH,
+        )
+        self.assertEqual(
+            expected_report_dir / "mart_model1_metrics.csv",
+            config.MART_MODEL1_METRICS_PATH,
+        )
+        self.assertEqual(
+            expected_report_dir / "model1_daily_insights.csv",
+            config.MODEL1_DAILY_INSIGHTS_PATH,
+        )
 
 if __name__ == "__main__":
     unittest.main()

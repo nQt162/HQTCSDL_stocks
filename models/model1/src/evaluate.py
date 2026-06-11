@@ -5,39 +5,18 @@ import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 
-def evaluate_model(
-    model,
-    X_test,
-    test_df,
-    target_type="future_close_price",
-    return_calibrator=None,
-):
+def evaluate_model(model, X_test, test_df):
     result_df = test_df.copy()
 
-    raw_predictions = np.asarray(model.predict(X_test))
+    pred_close = model.predict(X_test)
 
-    if target_type == "future_return":
-        result_df["raw_predicted_return"] = raw_predictions
-        if return_calibrator is not None:
-            predicted_return = np.asarray(return_calibrator.predict(raw_predictions))
-        else:
-            predicted_return = raw_predictions
-        if len(predicted_return) != len(result_df):
-            raise ValueError("predicted return length must match test rows")
-        result_df["predicted_return"] = predicted_return
-        result_df["predicted_close"] = result_df["close"] * (
-            1 + result_df["predicted_return"]
-        )
-    elif target_type == "future_close_price":
-        result_df["predicted_close"] = raw_predictions
-        result_df["predicted_return"] = result_df["predicted_close"] / result_df["close"] - 1
-    else:
-        raise ValueError("target_type must be future_close_price or future_return")
-
+    result_df["predicted_close"] = pred_close
     result_df["predicted_future_close"] = result_df["predicted_close"]
 
     if "target_close" not in result_df.columns:
         result_df["target_close"] = result_df["future_close"]
+
+    result_df["predicted_return"] = result_df["predicted_close"] / result_df["close"] - 1
 
     if "target_return" not in result_df.columns:
         result_df["target_return"] = result_df["target_close"] / result_df["close"] - 1
@@ -54,8 +33,13 @@ def evaluate_model(
     return_mae = mean_absolute_error(y_true_return, y_pred_return)
     return_rmse = np.sqrt(mean_squared_error(y_true_return, y_pred_return))
 
-    result_df["actual_direction"] = np.where(result_df["target_return"] > 0, 1, 0)
-    result_df["predicted_direction"] = np.where(result_df["predicted_return"] > 0, 1, 0)
+    result_df["actual_direction"] = np.where(
+        result_df["target_close"] > result_df["close"], 1, 0
+    )
+
+    result_df["predicted_direction"] = np.where(
+        result_df["predicted_close"] > result_df["close"], 1, 0
+    )
 
     directional_accuracy = (
         result_df["actual_direction"] == result_df["predicted_direction"]
@@ -71,10 +55,6 @@ def evaluate_model(
     baseline_return_rmse = np.sqrt(
         mean_squared_error(y_true_return, baseline_return_pred)
     )
-    baseline_direction = np.zeros(len(result_df), dtype=int)
-    baseline_directional_accuracy = (
-        result_df["actual_direction"].to_numpy() == baseline_direction
-    ).mean() * 100
 
     metrics = {
         "MAE": mae,
@@ -88,14 +68,7 @@ def evaluate_model(
         "Baseline_RMSE": baseline_rmse,
         "Baseline_MAPE": baseline_mape,
         "Baseline_Return_MAE": baseline_return_mae,
-        "Baseline_Return_RMSE": baseline_return_rmse,
-        "Baseline_Directional_Accuracy": baseline_directional_accuracy,
-        "Return_MAE_Improvement": baseline_return_mae - return_mae,
-        "Return_RMSE_Improvement": baseline_return_rmse - return_rmse,
-        "Directional_Accuracy_Over_Baseline": (
-            directional_accuracy - baseline_directional_accuracy
-        ),
-        "Beats_Baseline_Return_MAE": bool(return_mae < baseline_return_mae),
+        "Baseline_Return_RMSE": baseline_return_rmse
     }
 
     return metrics, result_df

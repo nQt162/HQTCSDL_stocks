@@ -28,21 +28,13 @@ def train_xgboost_model(
     return model
 
 
-def save_model(
-    model,
-    features,
-    horizon,
-    model_path,
-    target_type="future_close_price",
-    return_calibrator=None,
-):
+def save_model(model, features, horizon, model_path):
     joblib.dump(
         {
             "model": model,
             "features": features,
             "horizon": horizon,
-            "target_type": target_type,
-            "return_calibrator": return_calibrator,
+            "target_type": "future_close_price"
         },
-        model_path,
+        model_path
     )

@@ -11,9 +11,7 @@ from src.config import (
     FEATURES,
     HORIZON,
     MAX_ABS_TARGET_RETURN,
-    RETURN_CALIBRATION_MIN_ABS_SIGNAL,
     SLIPPAGE_RATE,
-    TARGET_TYPE,
     TRANSACTION_COST_RATE,
     WALK_FORWARD_BACKTEST_METRICS_PATH,
     WALK_FORWARD_BACKTEST_PATH,
@@ -32,15 +30,7 @@ from src.walk_forward import run_walk_forward_backtest
 
 
 def create_folders():
-    output_paths = [
-        WALK_FORWARD_PREDICTION_PATH,
-        WALK_FORWARD_FOLD_METRICS_PATH,
-        WALK_FORWARD_BACKTEST_PATH,
-        WALK_FORWARD_BACKTEST_METRICS_PATH,
-    ]
-
-    for directory in sorted({os.path.dirname(path) for path in output_paths}):
-        os.makedirs(directory, exist_ok=True)
+    os.makedirs(WALK_FORWARD_PREDICTION_PATH.parent, exist_ok=True)
 
 
 def main():
@@ -69,8 +59,6 @@ def main():
             step_ratio=WALK_FORWARD_STEP_RATIO,
             max_folds=WALK_FORWARD_MAX_FOLDS,
             early_stopping_rounds=EARLY_STOPPING_ROUNDS,
-            target_type=TARGET_TYPE,
-            calibration_min_abs_signal=RETURN_CALIBRATION_MIN_ABS_SIGNAL,
             backtest_kwargs={
                 "top_k": BACKTEST_TOP_K,
                 "min_volume": BACKTEST_MIN_VOLUME,

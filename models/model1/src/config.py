@@ -10,6 +10,9 @@ ENV_PATH = PROJECT_ROOT / ".env"
 load_dotenv(ENV_PATH)
 
 DATA_PATH = PROJECT_ROOT / "data" / "clean" / "features_all.csv"
+MODEL1_ROOT = PROJECT_ROOT / "models" / "model1"
+MODEL_DIR = MODEL1_ROOT / "models"
+REPORT_DIR = MODEL1_ROOT / "reports"
 
 CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST", "")
 CLICKHOUSE_PORT = int(os.getenv("CLICKHOUSE_PORT") or "8443")
@@ -24,23 +27,26 @@ CLICKHOUSE_SECURE = os.getenv("CLICKHOUSE_SECURE", "true").strip().lower() in {
     "yes",
 }
 
-MODEL_PATH = PROJECT_ROOT / "models" / "model1" / "models" / "price_forecasting_xgb.pkl"
+MODEL_PATH = MODEL_DIR / "price_forecasting_xgb.pkl"
 
-METRICS_PATH = PROJECT_ROOT / "reports" / "metrics.json"
-PREDICTION_PATH = PROJECT_ROOT / "reports" / "predictions.csv"
-PREDICTION_ACCURACY_PATH = PROJECT_ROOT / "reports" / "prediction_accuracy.csv"
-FEATURE_IMPORTANCE_PATH = PROJECT_ROOT / "reports" / "feature_importance.csv"
-BACKTEST_PATH = PROJECT_ROOT / "reports" / "backtest.csv"
-BACKTEST_METRICS_PATH = PROJECT_ROOT / "reports" / "backtest_metrics.json"
-BACKTEST_SWEEP_PATH = PROJECT_ROOT / "reports" / "backtest_sweep.csv"
-WALK_FORWARD_PREDICTION_PATH = PROJECT_ROOT / "reports" / "walk_forward_predictions.csv"
-WALK_FORWARD_FOLD_METRICS_PATH = PROJECT_ROOT / "reports" / "walk_forward_fold_metrics.csv"
-WALK_FORWARD_BACKTEST_PATH = PROJECT_ROOT / "reports" / "walk_forward_backtest.csv"
-WALK_FORWARD_BACKTEST_METRICS_PATH = PROJECT_ROOT / "reports" / "walk_forward_backtest_metrics.json"
+METRICS_PATH = REPORT_DIR / "metrics.json"
+PREDICTION_PATH = REPORT_DIR / "predictions.csv"
+PREDICTION_ACCURACY_PATH = REPORT_DIR / "prediction_accuracy.csv"
+FEATURE_IMPORTANCE_PATH = REPORT_DIR / "feature_importance.csv"
+BACKTEST_PATH = REPORT_DIR / "backtest.csv"
+BACKTEST_METRICS_PATH = REPORT_DIR / "backtest_metrics.json"
+BACKTEST_SWEEP_PATH = REPORT_DIR / "backtest_sweep.csv"
+WALK_FORWARD_PREDICTION_PATH = REPORT_DIR / "walk_forward_predictions.csv"
+WALK_FORWARD_FOLD_METRICS_PATH = REPORT_DIR / "walk_forward_fold_metrics.csv"
+WALK_FORWARD_BACKTEST_PATH = REPORT_DIR / "walk_forward_backtest.csv"
+WALK_FORWARD_BACKTEST_METRICS_PATH = REPORT_DIR / "walk_forward_backtest_metrics.json"
+MART_MODEL1_PRICE_FORECAST_PATH = REPORT_DIR / "mart_model1_price_forecast.csv"
+MART_MODEL1_TOP_EXPECTED_RETURN_PATH = REPORT_DIR / "mart_model1_top_expected_return.csv"
+MART_MODEL1_BACKTEST_DAILY_PATH = REPORT_DIR / "mart_model1_backtest_daily.csv"
+MART_MODEL1_METRICS_PATH = REPORT_DIR / "mart_model1_metrics.csv"
+MODEL1_DAILY_INSIGHTS_PATH = REPORT_DIR / "model1_daily_insights.csv"
 
 HORIZON = 5
-TARGET_TYPE = "future_return"
-RETURN_CALIBRATION_MIN_ABS_SIGNAL = 0.001
 
 TRAIN_RATIO = 0.7
 VALIDATION_RATIO = 0.15
@@ -90,7 +96,7 @@ XGB_PARAMS = {
     "reg_alpha": 0.1,
     "reg_lambda": 1.0,
     "objective": "reg:squarederror",
-    "eval_metric": "mae",
+    "eval_metric": "rmse",
     "random_state": 42,
     "n_jobs": -1
 }

@@ -2,7 +2,6 @@ import pandas as pd
 
 from src.backtest import compute_top_k_backtest
 from src.evaluate import evaluate_model
-from src.return_calibration import fit_return_calibrator
 from src.train_model import train_xgboost_model
 
 
@@ -95,8 +94,6 @@ def run_walk_forward_backtest(
     backtest_kwargs,
     max_folds=None,
     train_model_fn=train_xgboost_model,
-    target_type="future_close_price",
-    calibration_min_abs_signal=0.0,
 ):
     folds = create_walk_forward_folds(
         df=df,
@@ -115,40 +112,20 @@ def run_walk_forward_backtest(
         validation_df = fold["validation_df"]
         test_df = fold["test_df"]
 
-        if target_type == "future_return":
-            train_target = train_df["target_return"]
-            validation_target = validation_df["target_return"]
-        elif target_type == "future_close_price":
-            train_target = train_df["target_close"]
-            validation_target = validation_df["target_close"]
-        else:
-            raise ValueError("target_type must be future_close_price or future_return")
-
         model = train_model_fn(
             X_train=train_df[features],
-            y_train=train_target,
+            y_train=train_df["target_close"],
             params=params,
             X_val=validation_df[features],
-            y_val=validation_target,
+            y_val=validation_df["target_close"],
             early_stopping_rounds=early_stopping_rounds,
             verbose=False,
         )
-
-        return_calibrator = None
-        if target_type == "future_return":
-            validation_raw_predicted_return = model.predict(validation_df[features])
-            return_calibrator = fit_return_calibrator(
-                validation_raw_predicted_return,
-                validation_df["target_return"],
-                min_abs_signal=calibration_min_abs_signal,
-            )
 
         metrics, fold_prediction_df = evaluate_model(
             model=model,
             X_test=test_df[features],
             test_df=test_df,
-            target_type=target_type,
-            return_calibrator=return_calibrator,
         )
         fold_prediction_df = fold_prediction_df.copy()
         fold_prediction_df.insert(0, "fold_id", fold["fold_id"])

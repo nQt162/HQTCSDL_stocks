@@ -1,147 +1,165 @@
 from pathlib import Path
-import json
-import sys
-from datetime import datetime
+import os
 
-import numpy as np
 import pandas as pd
-import streamlit as st
+
+from src.config import HORIZON, MART_MODEL1_PRICE_FORECAST_PATH
 
 
-MODEL1_DIR = Path(__file__).resolve().parent
-if str(MODEL1_DIR) not in sys.path:
-    sys.path.insert(0, str(MODEL1_DIR))
+REQUIRED_COLUMNS = [
+    "prediction_date",
+    "target_date",
+    "symbol",
+    "real_close",
+    "predicted_close",
+]
 
-from src.config import HORIZON, MODEL_PATH, TARGET_TYPE  # noqa: E402
-from src.data_loader import load_data  # noqa: E402
-from src.predict import load_saved_model  # noqa: E402
-
-
-REPORT_DIR = MODEL1_DIR / "reports"
-PREDICTION_LOG_PATH = REPORT_DIR / "streamlit_predictions.csv"
-LATEST_PREDICTION_PATH = REPORT_DIR / "latest_streamlit_prediction.json"
-
-
-st.set_page_config(page_title="Model 1 Demo", layout="wide")
-st.title("Model 1 - Stock Prediction Demo")
-
-
-@st.cache_resource
-def get_model():
-    return load_saved_model(MODEL_PATH, include_metadata=True)
+DISPLAY_COLUMNS = [
+    "symbol",
+    "prediction_date",
+    "target_date",
+    "real_close",
+    "predicted_close",
+    "price_error",
+    "error_pct",
+]
 
 
-@st.cache_data(ttl=600)
-def get_feature_data():
-    df = load_data()
-    df["trading_date"] = pd.to_datetime(df["trading_date"])
-    df["symbol"] = df["symbol"].astype(str).str.upper().str.strip()
-    return df.sort_values(["symbol", "trading_date"])
+def prepare_forecast_data(forecasts_df):
+    missing_columns = [col for col in REQUIRED_COLUMNS if col not in forecasts_df.columns]
+    if missing_columns:
+        raise ValueError("Missing model1 forecast columns: " + ", ".join(missing_columns))
+
+    df = forecasts_df.copy()
+    df["prediction_date"] = pd.to_datetime(df["prediction_date"], errors="coerce")
+    df["target_date"] = pd.to_datetime(df["target_date"], errors="coerce")
+
+    numeric_columns = ["real_close", "predicted_close"]
+    for col in numeric_columns:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    df = df.dropna(subset=["prediction_date", "symbol", "predicted_close"])
+    return df
 
 
-def save_prediction(result):
-    REPORT_DIR.mkdir(parents=True, exist_ok=True)
-
-    result_df = pd.DataFrame([result])
-    if PREDICTION_LOG_PATH.exists():
-        result_df.to_csv(PREDICTION_LOG_PATH, mode="a", header=False, index=False)
-    else:
-        result_df.to_csv(PREDICTION_LOG_PATH, index=False)
-
-    with open(LATEST_PREDICTION_PATH, "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False, indent=4, default=str)
-
-
-def predict_one_row(row_df, model, features, metadata):
-    missing_features = [col for col in features if col not in row_df.columns]
-    if missing_features:
-        raise ValueError("Missing feature: " + ", ".join(missing_features))
-
-    for col in features + ["close"]:
-        row_df[col] = pd.to_numeric(row_df[col], errors="coerce")
-
-    if row_df[features + ["close"]].isna().any(axis=None):
-        raise ValueError("Selected row has missing or non-numeric features.")
-
-    raw_prediction = np.asarray(model.predict(row_df[features]), dtype=float)
-
-    target_type = metadata.get("target_type", TARGET_TYPE)
-    return_calibrator = metadata.get("return_calibrator")
-    close = float(row_df["close"].iloc[0])
-
-    if target_type == "future_return":
-        if return_calibrator is not None:
-            predicted_return = float(return_calibrator.predict(raw_prediction)[0])
-        else:
-            predicted_return = float(raw_prediction[0])
-        predicted_close = close * (1 + predicted_return)
-    else:
-        predicted_close = float(raw_prediction[0])
-        predicted_return = predicted_close / close - 1
-
-    return predicted_return, predicted_close
-
-
-try:
-    model, features, metadata = get_model()
-    df = get_feature_data()
-
-    symbols = sorted(df["symbol"].dropna().unique().tolist())
-    default_symbol_index = symbols.index("FPT") if "FPT" in symbols else 0
-    symbol = st.selectbox("Symbol", symbols, index=default_symbol_index)
-
-    symbol_df = df[df["symbol"] == symbol].copy()
-    valid_dates = sorted(symbol_df["trading_date"].dt.date.unique().tolist())
-    selected_date = st.selectbox(
-        "Trading date",
-        valid_dates,
-        index=len(valid_dates) - 1,
-    )
-
-    if st.button("Predict", type="primary"):
-        row_df = symbol_df[symbol_df["trading_date"].dt.date == selected_date].copy()
-
-        if row_df.empty:
-            st.warning("No feature data found for the selected symbol and date.")
-            st.stop()
-
-        if len(row_df) > 1:
-            row_df = row_df.head(1).copy()
-
-        predicted_return, predicted_close = predict_one_row(
-            row_df=row_df,
-            model=model,
-            features=features,
-            metadata=metadata,
+def load_forecasts(path=MART_MODEL1_PRICE_FORECAST_PATH):
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Model1 forecast mart not found: {path}. Run python main.py first."
         )
 
-        direction = "UP" if predicted_return >= 0 else "DOWN"
+    return prepare_forecast_data(pd.read_csv(path))
 
-        result = {
-            "run_at": datetime.now().isoformat(timespec="seconds"),
-            "symbol": symbol,
-            "trading_date": str(selected_date),
-            "close": float(row_df["close"].iloc[0]),
-            "predicted_return": predicted_return,
-            "predicted_return_pct": predicted_return * 100,
-            "predicted_close": predicted_close,
-            "direction": direction,
-            "horizon": metadata.get("horizon", HORIZON),
-            "target_type": metadata.get("target_type", TARGET_TYPE),
+
+def available_prediction_dates(forecasts_df):
+    dates = forecasts_df["prediction_date"].dropna().dt.date.unique().tolist()
+    return sorted(dates)
+
+
+def filter_forecasts_by_date(forecasts_df, selected_date):
+    selected_timestamp = pd.Timestamp(selected_date).normalize()
+    prediction_dates = forecasts_df["prediction_date"].dt.normalize()
+    day_df = forecasts_df[prediction_dates == selected_timestamp].copy()
+    return day_df.sort_values("symbol").reset_index(drop=True)
+
+
+def build_daily_summary(day_df):
+    if day_df.empty:
+        return {
+            "num_symbols": 0,
+            "target_date": None,
+            "avg_predicted_close": None,
+            "median_predicted_close": None,
         }
 
-        save_prediction(result)
+    target_dates = day_df["target_date"].dropna().dt.date.unique().tolist()
+    target_date = target_dates[0].isoformat() if len(target_dates) == 1 else "Multiple"
+    return {
+        "num_symbols": int(len(day_df)),
+        "target_date": target_date,
+        "avg_predicted_close": float(day_df["predicted_close"].mean()),
+        "median_predicted_close": float(day_df["predicted_close"].median()),
+    }
 
-        st.subheader("Prediction Result")
-        st.json(result)
 
-        st.subheader("Features Used")
-        st.dataframe(
-            row_df[["symbol", "trading_date"] + features],
-            use_container_width=True,
-        )
+def build_display_table(day_df):
+    display_df = day_df.copy()
+    display_df["price_error"] = display_df["predicted_close"] - display_df["real_close"]
+    display_df["error_pct"] = (
+        display_df["price_error"].abs() / display_df["real_close"].abs() * 100
+    )
+    return display_df[DISPLAY_COLUMNS]
 
-        st.success(f"Saved prediction to {PREDICTION_LOG_PATH}")
 
-except Exception as exc:
-    st.error(f"Error running Model 1: {exc}")
+def format_number(value):
+    if value is None or pd.isna(value):
+        return "-"
+    return f"{value:,.2f}"
+
+
+def format_percent_value(value):
+    if value is None or pd.isna(value):
+        return "-"
+    return f"{value:.2f}%"
+
+
+def main():
+    import streamlit as st
+
+    if os.getenv("MODEL1_DASHBOARD_EMBEDDED") != "1":
+        st.set_page_config(page_title="Model1 Future Close", layout="wide")
+    st.title("Model1 Future Close")
+
+    @st.cache_data(show_spinner=False)
+    def cached_load_forecasts(path):
+        return load_forecasts(Path(path))
+
+    try:
+        forecasts_df = cached_load_forecasts(str(MART_MODEL1_PRICE_FORECAST_PATH))
+    except Exception as exc:
+        st.error(str(exc))
+        st.stop()
+
+    prediction_dates = available_prediction_dates(forecasts_df)
+    if not prediction_dates:
+        st.warning("No model1 forecast dates found.")
+        st.stop()
+
+    selected_date = st.date_input(
+        "Prediction date",
+        value=prediction_dates[-1],
+        min_value=prediction_dates[0],
+        max_value=prediction_dates[-1],
+    )
+
+    day_df = filter_forecasts_by_date(forecasts_df, selected_date)
+    if day_df.empty:
+        st.warning("No model1 result for this date.")
+        st.stop()
+
+    summary = build_daily_summary(day_df)
+    metric_cols = st.columns(4)
+    metric_cols[0].metric("Symbols", f"{summary['num_symbols']:,}")
+    metric_cols[1].metric("Target date", summary["target_date"] or "-")
+    metric_cols[2].metric(
+        "Avg predicted close",
+        format_number(summary["avg_predicted_close"]),
+    )
+    metric_cols[3].metric(
+        "Median predicted close",
+        format_number(summary["median_predicted_close"]),
+    )
+
+    st.caption(f"Model1 predicts future close after {HORIZON} trading sessions.")
+
+    display_df = build_display_table(day_df)
+    st.dataframe(display_df, use_container_width=True, hide_index=True)
+
+    st.subheader("Predicted close by symbol")
+    chart_df = display_df.set_index("symbol")[["predicted_close"]].head(30)
+    st.bar_chart(chart_df)
+
+
+if __name__ == "__main__":
+    main()
