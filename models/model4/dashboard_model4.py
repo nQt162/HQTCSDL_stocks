@@ -73,12 +73,11 @@ FEATURE_DESCRIPTIONS = {
 }
 
 # ==================== PAGE CONFIG ====================
-if os.getenv("MODEL4_DASHBOARD_EMBEDDED") != "1":
-    st.set_page_config(
-        page_title="Module 4 — Benchmark Outperformance",
-        page_icon="📈",
-        layout="wide",
-    )
+st.set_page_config(
+    page_title="Module 4 — Benchmark Outperformance",
+    page_icon="📈",
+    layout="wide",
+)
 
 # ==================== CUSTOM CSS ====================
 st.markdown("""
@@ -608,20 +607,49 @@ def render_tab_sector():
         st.info("Chưa có dữ liệu sector.")
         return
 
-    sector_df["encode_sector"] = sector_df["encode_sector"].astype(str)
-    sector_df["Ngành"] = "Ngành " + sector_df["encode_sector"]
+    # sector_df["encode_sector"] = sector_df["encode_sector"].astype(str)
+    # sector_df["Ngành"] = "Ngành " + sector_df["encode_sector"]
+    SECTOR_MAP = {
+    0: "Industrial Goods & Services",
+    1: "Food & Beverage",
+    2: "Banks",
+    3: "Construction & Materials",
+    4: "Basic Resources",
+    5: "Media",
+    6: "Retail",
+    7: "Personal & Household Goods",
+    8: "Real Estate",
+    9: "Health Care",
+    10: "Financial Services",
+    11: "Chemicals",
+    12: "Travel & Leisure",
+    13: "Utilities",
+    14: "Insurance",
+    15: "Automobiles & Parts",
+    16: "Technology",
+    17: "Oil & Gas",
+    18: "Telecommunications",
+}
+    sector_df["encode_sector"] = pd.to_numeric(sector_df["encode_sector"], errors="coerce").astype("Int64")
+    sector_df["Ngành"] = sector_df["encode_sector"].map(SECTOR_MAP).fillna("Ngành " + sector_df["encode_sector"].astype(str))
 
     # ── KPIs ──
     best_sector = sector_df.loc[sector_df["accuracy_sector"].idxmax()]
     worst_sector = sector_df.loc[sector_df["accuracy_sector"].idxmin()]
 
+    def sector_name(encode):
+        try:
+            return SECTOR_MAP.get(int(encode), f"Ngành {encode}")
+        except:
+            return f"Ngành {encode}"
+
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("🏭 Số ngành", number(len(sector_df)))
     c2.metric("🎯 Accuracy TB", pct(sector_df["accuracy_sector"].mean()))
     c3.metric("🥇 Ngành tốt nhất",
-              f"Ngành {best_sector['encode_sector']} ({pct(best_sector['accuracy_sector'])})")
+            f"{sector_name(best_sector['encode_sector'])} ({pct(best_sector['accuracy_sector'])})")
     c4.metric("⚠️ Ngành kém nhất",
-              f"Ngành {worst_sector['encode_sector']} ({pct(worst_sector['accuracy_sector'])})")
+            f"{sector_name(worst_sector['encode_sector'])} ({pct(worst_sector['accuracy_sector'])})")
 
     col_left, col_right = st.columns(2)
 
@@ -777,19 +805,17 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
-    # Sidebar info is useful when this file runs alone, but should not
-    # overwrite the main application sidebar when embedded in main_web.py.
-    if os.getenv("MODEL4_DASHBOARD_EMBEDDED") != "1":
-        st.sidebar.markdown("### ℹ️ Module 4")
-        st.sidebar.markdown("""
-        **Bài toán:** Binary Classification  
-        **Thuật toán:** LightGBM  
-        **Horizon:** 5 ngày giao dịch  
-        **Features:** 23  
-        """)
-        st.sidebar.divider()
-        st.sidebar.markdown("**🗺️ Hướng dẫn sử dụng:**")
-        st.sidebar.markdown("""
+    # Sidebar info
+    st.sidebar.markdown("### ℹ️ Module 4")
+    st.sidebar.markdown("""
+    **Bài toán:** Binary Classification  
+    **Thuật toán:** LightGBM  
+    **Horizon:** 5 ngày giao dịch  
+    **Features:** 23  
+    """)
+    st.sidebar.divider()
+    st.sidebar.markdown("**🗺️ Hướng dẫn sử dụng:**")
+    st.sidebar.markdown("""
 | Tab | Nội dung |
 |-----|----------|
 | 📊 Tổng quan | KPI + Top 20 cổ phiếu |
@@ -798,14 +824,14 @@ def main():
 | 🏭 Theo ngành | So sánh 19 ngành |
 | 🔬 Model | Feature importance |
 """)
-        st.sidebar.divider()
-        st.sidebar.markdown("**💡 Cách đọc kết quả:**")
-        st.sidebar.info("✅ Xác suất > 50% → Model dự đoán cổ phiếu sẽ **vượt benchmark** thị trường trong 5 ngày tới")
-        st.sidebar.warning("⚠️ Xác suất < 50% → Model dự đoán cổ phiếu **không vượt** được thị trường")
-        st.sidebar.divider()
-        st.sidebar.caption("🏦 Dữ liệu: ClickHouse Cloud (AWS Singapore)")
-        st.sidebar.caption("📅 Test period: 2024-04-17 → 2026-06-01")
-        st.sidebar.caption("🤖 Model: LightGBM · 300 cây · 23 features")
+    st.sidebar.divider()
+    st.sidebar.markdown("**💡 Cách đọc kết quả:**")
+    st.sidebar.info("✅ Xác suất > 50% → Model dự đoán cổ phiếu sẽ **vượt benchmark** thị trường trong 5 ngày tới")
+    st.sidebar.warning("⚠️ Xác suất < 50% → Model dự đoán cổ phiếu **không vượt** được thị trường")
+    st.sidebar.divider()
+    st.sidebar.caption("🏦 Dữ liệu: ClickHouse Cloud (AWS Singapore)")
+    st.sidebar.caption("📅 Test period: 2024-04-17 → 2026-06-01")
+    st.sidebar.caption("🤖 Model: LightGBM · 300 cây · 23 features")
 
     # Tabs
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
