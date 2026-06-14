@@ -1859,20 +1859,13 @@ def main() -> None:
     st.sidebar.caption(f"ClickHouse database: {CLICKHOUSE_DATABASE}")
     st.sidebar.caption(f"Feature table: {FEATURES_DATABASE}.{FEATURES_TABLE}")
 
-    if page.startswith("1."):
-        render_overview_page()
-    elif page.startswith("2."):
-        render_stock_lookup_page()
-    elif page.startswith("3."):
-        render_feature_engineering_page()
-    elif page.startswith("4."):
-        render_data_mart_page()
-    elif page.startswith("5."):
-        render_prediction_models_page()
-    elif page.startswith("6."):
-        render_insight_page()
-    else:
-        render_data_quality_page()
+    if page.startswith("1."): render_overview_page()
+    elif page.startswith("2."): render_stock_lookup_page()
+    elif page.startswith("3."): render_feature_engineering_page()
+    elif page.startswith("4."): render_data_mart_page()
+    elif page.startswith("5."): render_prediction_models_page()
+    elif page.startswith("6."): render_insight_page()
+    else: render_data_quality_page()
 
 
 if __name__ == "__main__":
