@@ -232,10 +232,10 @@ def load_sector_outperform() -> pd.DataFrame:
 @st.cache_data(ttl=300, show_spinner=False)
 def load_metrics_history() -> pd.DataFrame:
     df = run_query(f"""
-        SELECT run_at, accuracy, precision, recall, f1, roc_auc,
-               test_rows, train_ratio
+        SELECT metric_name, metric_value, created_at
         FROM {DATABASE}.mart_model4_metrics
-        ORDER BY run_at DESC
+        WHERE metric_name IN ('accuracy','precision','recall','f1','roc_auc')
+        ORDER BY created_at DESC
     """)
     return df
 
@@ -317,12 +317,29 @@ def kpi_card(label, value, sub="", color="#2a9d8f"):
 def render_tab_overview():
     st.markdown('<p class="section-header">📊 Chỉ số hiệu suất mô hình</p>', unsafe_allow_html=True)
 
+    try:
+        metrics_df = run_query(f"""
+            SELECT metric_name, metric_value
+            FROM {DATABASE}.mart_model4_metrics
+            WHERE metric_name IN ('accuracy','precision','recall','f1','roc_auc')
+        """)
+        m = dict(zip(metrics_df["metric_name"], metrics_df["metric_value"]))
+        acc = pct(float(m["accuracy"]))
+        pre = pct(float(m["precision"]))
+        rec = pct(float(m["recall"]))
+        f1  = pct(float(m["f1"]))
+        auc = pct(float(m["roc_auc"]))
+    except Exception as exc:
+        display_error("Không tải được metrics.", exc)
+        return
+
     c1, c2, c3, c4, c5 = st.columns(5)
-    with c1: kpi_card("🎯 Accuracy",  "57.28%", "Tỷ lệ đoán đúng tổng thể", "#2a9d8f")
-    with c2: kpi_card("🔍 Precision", "56.55%", "Khi hô OP, đúng 56.55%",   "#1d6fa4")
-    with c3: kpi_card("📡 Recall",    "61.20%", "Bắt được 61.2% OP thật",   "#6a4c93")
-    with c4: kpi_card("⚖️ F1-Score",  "58.78%", "Cân bằng Precision/Recall", "#e76f51")
-    with c5: kpi_card("📈 ROC-AUC",   "60.85%", "Tốt hơn đoán mò 10.85%",  "#2d6a4f")
+    with c1: kpi_card("🎯 Accuracy",  acc, "Tỷ lệ đoán đúng tổng thể", "#2a9d8f")
+    with c2: kpi_card("🔍 Precision", pre, "Khi hô OP, đúng " + pre,   "#1d6fa4")
+    with c3: kpi_card("📡 Recall",    rec, "Bắt được " + rec + " OP thật", "#6a4c93")
+    with c4: kpi_card("⚖️ F1-Score",  f1,  "Cân bằng Precision/Recall", "#e76f51")
+    with c5: kpi_card("📈 ROC-AUC", auc, f"Tốt hơn ngẫu nhiên {pct(float(m['roc_auc']) - 0.5)}", "#2d6a4f")
+    
 
     st.markdown('<p class="section-header">🏆 Top 20 Cổ phiếu Outperform ngày mới nhất</p>', unsafe_allow_html=True)
 
@@ -454,7 +471,7 @@ def render_tab_demo():
         st.metric("📌 Mã cổ phiếu", symbol)
         st.metric("📅 Ngày", str(selected_date))
         if close_val is not None:
-            st.metric("💰 Giá đóng cửa", f"{float(close_val):,.0f} đ")
+            st.metric("💰 Giá đóng cửa", f"{float(close_val):,.1f} nghìn đồng")
 
     with res_col2:
         badge_class = "op-badge-yes" if is_op else "op-badge-no"
@@ -730,25 +747,17 @@ def render_tab_model():
         st.dataframe(info_df, use_container_width=True, hide_index=True, height=430)
 
     # ── Metrics history ──
-    st.markdown('<p class="section-header">📈 Lịch sử chạy pipeline (mart_model4_metrics)</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">📈 Lần chạy pipeline gần nhất (mart_model4_metrics)</p>', unsafe_allow_html=True)
     try:
         metrics_df = load_metrics_history()
         if not metrics_df.empty:
             display_metrics = metrics_df.copy()
-            for col in ["accuracy","precision","recall","f1","roc_auc","train_ratio"]:
-                if col in display_metrics.columns:
-                    display_metrics[col] = display_metrics[col].apply(
-                        lambda x: f"{float(x)*100:.2f}%" if pd.notna(x) else "N/A")
-            display_metrics["test_rows"] = display_metrics["test_rows"].apply(number)
+            display_metrics["metric_value"] = display_metrics["metric_value"].apply(
+                lambda x: f"{float(x)*100:.2f}%")
             display_metrics = display_metrics.rename(columns={
-                "run_at":     "Lần chạy",
-                "accuracy":   "Accuracy",
-                "precision":  "Precision",
-                "recall":     "Recall",
-                "f1":         "F1",
-                "roc_auc":    "ROC-AUC",
-                "test_rows":  "Test rows",
-                "train_ratio":"Train ratio",
+                "metric_name":  "Metric",
+                "metric_value": "Giá trị",
+                "created_at":   "Thời gian chạy",
             })
             st.dataframe(display_metrics, use_container_width=True, hide_index=True)
         else:
