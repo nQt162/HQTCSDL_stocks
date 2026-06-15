@@ -503,6 +503,17 @@ def format_insight_value(column: str, value) -> str:
     return f"{numeric_value:,.4f}"
 
 
+def is_date_like_insight_column(column: str) -> bool:
+    lower_column = column.lower()
+    return (
+        lower_column == "date"
+        or lower_column.endswith("_date")
+        or lower_column.endswith("_at")
+        or "datetime" in lower_column
+        or "timestamp" in lower_column
+    )
+
+
 def render_mart_insights(
     table_full_name: str,
     mart_df: pd.DataFrame,
@@ -573,6 +584,33 @@ def render_mart_insights(
         summary = ", ".join(f"{idx}: {int(value)}" for idx, value in counts.items())
         insights.append(f"Phân bố `{column}` nổi bật: {summary}.")
 
+    date_summary_rows = []
+    date_columns = [
+        column
+        for column in mart_df.columns
+        if is_date_like_insight_column(column)
+    ]
+    if date_col and date_col in mart_df.columns and date_col not in date_columns:
+        date_columns.insert(0, date_col)
+
+    for column in date_columns[:4]:
+        parsed_dates = pd.to_datetime(mart_df[column], errors="coerce").dropna()
+        if parsed_dates.empty:
+            continue
+        min_col_date = parsed_dates.min()
+        max_col_date = parsed_dates.max()
+        date_summary_rows.append(
+            {
+                "metric": column,
+                "min": min_col_date.strftime("%Y-%m-%d"),
+                "max": max_col_date.strftime("%Y-%m-%d"),
+            }
+        )
+        insights.append(
+            f"`{column}` từ {min_col_date.strftime('%Y-%m-%d')} "
+            f"đến {max_col_date.strftime('%Y-%m-%d')}."
+        )
+
     numeric_priority = [
         "risk_probability",
         "outperform_probability",
@@ -590,10 +628,10 @@ def render_mart_insights(
     ]
     numeric_columns = []
     for column in numeric_priority:
-        if column in mart_df.columns:
+        if column in mart_df.columns and not is_date_like_insight_column(column):
             numeric_columns.append(column)
     for column in mart_df.columns:
-        if column in numeric_columns:
+        if column in numeric_columns or is_date_like_insight_column(column):
             continue
         numeric = pd.to_numeric(mart_df[column], errors="coerce")
         if numeric.notna().sum() > 0:
@@ -643,6 +681,13 @@ def render_mart_insights(
 
     for item in insights[:10]:
         st.markdown(f"- {item}")
+
+    if date_summary_rows:
+        st.dataframe(
+            pd.DataFrame(date_summary_rows),
+            use_container_width=True,
+            hide_index=True,
+        )
 
     if numeric_summary_rows:
         st.dataframe(
@@ -1342,27 +1387,8 @@ def render_data_mart_page() -> None:
 
 
 def render_model1_prediction() -> None:
-    os.environ["MODEL1_DASHBOARD_EMBEDDED"] = "1"
-    add_model_path(MODEL1_DIR)
-
-    try:
-        dashboard_model1 = load_module_from_path(
-            "embedded_dashboard_model1",
-            MODEL1_DIR / "test.py",
-        )
-    except Exception as exc:
-        display_error("Không tải được Streamlit Model 1.", exc)
-        st.caption(f"Kiểm tra file: {MODEL1_DIR / 'test.py'}")
-        return
-
-    try:
-        dashboard_model1.main()
-    except Exception as exc:
-        display_error("Không render được Streamlit Model 1.", exc)
-    return
-
     st.subheader("Model 1 - Dự đoán return 5 phiên và suy ra giá")
-    st.caption("Logic dựa trên models/model1/test.py.")
+    st.caption("Du doan live tu model da luu va bang features_all trong ClickHouse.")
 
     try:
         symbols = get_feature_symbols()
