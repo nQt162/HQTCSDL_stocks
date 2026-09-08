@@ -6,7 +6,11 @@ __pycache__/
 *.pyc
 __init__.py
 
+# Environment files and local secrets
 .env
+.env.*
+!.env.example
+
 output_model5/
 models/model5/output_model5/
 
