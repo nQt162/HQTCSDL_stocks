@@ -1,0 +1,30 @@
+﻿metric_group,metric,value
+classification,accuracy,55.22625
+classification,macro_precision,0.4912217401957122
+classification,macro_recall,0.4646792456499025
+classification,macro_f1,0.46548011217740437
+classification,adjusted_accuracy,55.010000000000005
+classification,adjusted_macro_precision,0.5629336281043559
+classification,adjusted_macro_recall,0.39608018026244657
+classification,adjusted_macro_f1,0.3594268287535203
+classification,baseline_accuracy,51.675000000000004
+dataset,test_rows,80000
+dataset,test_symbols,346
+dataset,test_start_date,2025-01-02 00:00:00
+dataset,test_end_date,2026-06-04 00:00:00
+class_sell,precision,0.4389261744966443
+class_sell,recall,0.37931208392172683
+class_sell,f1-score,0.4069474880285691
+class_sell,support,19828.0
+class_hold,precision,0.6165366077576314
+class_hold,recall,0.7797532656023222
+class_hold,f1-score,0.6886054857728787
+class_hold,support,41340.0
+class_buy,precision,0.4182024383328608
+class_buy,recall,0.23497238742565846
+class_buy,f1-score,0.30088736273076533
+class_buy,support,18832.0
+adjusted_signal,sell_signals,5515
+adjusted_signal,sell_precision,0.556844968268359
+adjusted_signal,buy_signals,2555
+adjusted_signal,buy_precision,0.5835616438356165

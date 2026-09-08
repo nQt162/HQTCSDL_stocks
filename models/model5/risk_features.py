@@ -140,7 +140,7 @@ def load_features_all(
     database: str = DEFAULT_FEATURES_ALL_DATABASE,
     table: str = DEFAULT_FEATURES_ALL_TABLE,
 ) -> pd.DataFrame:
-    """Load common model features from ClickHouse stock.features_all."""
+    
     query = f"""
         SELECT *
         FROM {quote_identifier(database)}.{quote_identifier(table)}

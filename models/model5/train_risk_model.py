@@ -52,10 +52,7 @@ def _prepare_training_data(feature_df: pd.DataFrame):
     return data.sort_values(["trading_date", "symbol"]).reset_index(drop=True)
 
 
-def _time_train_test_split(
-    data: pd.DataFrame,
-    train_ratio: float = 0.8,
-):
+def _time_train_test_split(data: pd.DataFrame,train_ratio: float = 0.8,):
     unique_dates = pd.Series(data["trading_date"].unique()).sort_values().reset_index(
         drop=True
     )

@@ -1,0 +1,789 @@
+HUONG DAN LAM PAGE POWER BI CHO MODEL 3
+Nguon tham chieu:
+models/model3/reports/model3_dashboard.html
+
+Muc tieu page Model 3
+=====================
+Page nay trinh bay mo hinh Model 3 - Trading Signal.
+Model 3 la XGBoost classifier sinh tin hieu:
+
+- SELL
+- HOLD
+- BUY
+
+Dashboard HTML hien tai gom cac phan chinh:
+1. KPI cards tong quan model.
+2. Backtest curve: Gross / Net / Benchmark.
+3. Signal distribution: Actual / Model / Adjusted.
+4. Market watchlist moi nhat: Top BUY candidates va Top SELL risk.
+5. Insights / nhan xet tu dong.
+6. Confusion matrix.
+7. Feature importance.
+8. Best backtest configurations.
+
+
+BANG CLICKHOUSE / POWER BI CAN DUNG
+===================================
+Chon cac bang sau trong Power BI neu co:
+
+1. mart_model3_trading_signals
+   Cot quan trong:
+   - model_name
+   - trading_date
+   - symbol
+   - predicted_signal
+   - adjusted_signal
+   - sell_probability
+   - hold_probability
+   - buy_probability
+   - encode_sector
+   - sector
+   - close
+   - volume
+   - target_signal
+   - target_return
+   - predicted_signal_score
+   - signal_confidence
+   - buy_sell_margin
+   - created_at
+
+2. mart_model3_signal_summary
+   Cot quan trong:
+   - model_name
+   - trading_date
+   - encode_sector
+   - sector
+   - buy_count
+   - hold_count
+   - sell_count
+   - total_symbols
+   - created_at
+
+3. mart_model3_backtest_daily
+   Cot quan trong:
+   - model_name
+   - trading_date
+   - selected_symbols
+   - selected_count
+   - daily_return
+   - benchmark_return
+   - avg_buy_probability
+   - daily_cost_rate
+   - daily_return_net
+   - cumulative_return
+   - cumulative_return_net
+   - benchmark_cumulative_return
+   - created_at
+
+4. mart_model3_metrics
+   Cot quan trong:
+   - model_name
+   - metric_group
+   - metric_name
+   - metric_value
+   - created_at
+
+5. mart_model3_feature_importance
+   Cot quan trong:
+   - feature
+   - importance
+
+6. mart_model3_backtest_sweep
+   Cot quan trong:
+   - Top_K
+   - Min_Volume
+   - Min_Close
+   - Min_Buy_Probability
+   - Min_Buy_Sell_Margin
+   - Transaction_Cost_Rate
+   - Slippage_Rate
+   - Round_Trip_Cost_Rate
+   - Eligible_Rows
+   - Eligible_Symbols
+   - Backtest_Days
+   - Trade_Days
+   - Average_Daily_Return
+   - Average_Daily_Return_Net
+   - Cumulative_Return
+   - Cumulative_Return_Net
+   - Benchmark_Cumulative_Return
+   - Hit_Rate
+   - Sharpe_Ratio
+   - Sharpe_Ratio_Net
+
+
+BO CUC GOI Y CHO PAGE MODEL 3
+=============================
+Ten page:
+05_Model3_TradingSignals
+
+Bo cuc de lam:
+
+Hang 1:
+- Header + subtitle.
+
+Hang 2:
+- 6 KPI cards:
+  Accuracy
+  BUY Precision
+  SELL Precision
+  Macro F1
+  Net Return
+  Net Sharpe
+
+Hang 3:
+- Ben trai: Backtest Curve.
+- Ben phai: Signal Distribution.
+
+Hang 4:
+- Ben trai: Top BUY Candidates / Watchlist.
+- Ben phai: Top SELL / Risk Watchlist.
+
+Hang 5:
+- Ben trai: Confusion Matrix.
+- Ben phai: Feature Importance.
+
+Hang 6:
+- Best Backtest Configurations table.
+- Insight / ket luan ngan.
+
+
+MAU SAC GOI Y
+============
+Dung mau thong nhat voi dashboard HTML:
+
+- BUY: xanh la / teal
+  #2A9D8F
+
+- HOLD: xam
+  #6C757D
+
+- SELL: do hong / red
+  #D1495B
+
+- Net / Model: xanh navy
+  #1D3557
+
+- Background: trang hoac xanh rat nhat.
+
+
+PHAN 1 - HEADER
+===============
+Visual:
+- Text box
+
+Noi dung:
+Model 3 - Trading Signal Dashboard
+
+Subtitle:
+XGBoost classifier for SELL / HOLD / BUY signals
+
+Goi y text tieng Viet:
+Model 3 du doan tin hieu giao dich BUY / HOLD / SELL dua tren cac feature ky thuat cua co phieu.
+
+
+PHAN 2 - KPI CARDS
+==================
+Dashboard HTML co 6 metric cards:
+
+1. Accuracy
+   Gia tri HTML tham chieu: 56.30%
+   Caption: Baseline 51.59%
+
+2. BUY Precision
+   Gia tri HTML tham chieu: 67.98%
+   Caption: Adjusted BUY rows 734
+
+3. SELL Precision
+   Gia tri HTML tham chieu: 65.03%
+   Caption: Adjusted SELL rows 1,993
+
+4. Macro F1
+   Gia tri HTML tham chieu: 0.4598
+
+5. Net Return
+   Gia tri HTML tham chieu: 223.39%
+   Caption: After transaction cost and slippage
+
+6. Net Sharpe
+   Gia tri HTML tham chieu: 1.370
+   Caption: Trade days 353
+
+
+Bang/cot dung trong Power BI:
+- mart_model3_metrics[metric_name]
+- mart_model3_metrics[metric_value]
+- mart_model3_trading_signals[adjusted_signal]
+- mart_model3_backtest_daily[cumulative_return_net]
+- mart_model3_backtest_sweep[Sharpe_Ratio_Net]
+
+
+DAX measure goi y
+-----------------
+Tao trong Modeling -> New measure.
+
+1. Accuracy
+
+M3 Accuracy % =
+DIVIDE(
+    CALCULATE(
+        MAX(mart_model3_metrics[metric_value]),
+        mart_model3_metrics[metric_name] = "Accuracy"
+    ),
+    100
+)
+
+Format: Percentage.
+
+
+2. Macro F1
+
+M3 Macro F1 =
+CALCULATE(
+    MAX(mart_model3_metrics[metric_value]),
+    mart_model3_metrics[metric_name] = "Macro_F1"
+)
+
+Format: Decimal, 4 chu so.
+
+
+3. BUY Count Adjusted
+
+M3 Adjusted BUY Count =
+CALCULATE(
+    COUNTROWS(mart_model3_trading_signals),
+    mart_model3_trading_signals[adjusted_signal] = "BUY"
+)
+
+
+4. SELL Count Adjusted
+
+M3 Adjusted SELL Count =
+CALCULATE(
+    COUNTROWS(mart_model3_trading_signals),
+    mart_model3_trading_signals[adjusted_signal] = "SELL"
+)
+
+
+5. HOLD Count Adjusted
+
+M3 Adjusted HOLD Count =
+CALCULATE(
+    COUNTROWS(mart_model3_trading_signals),
+    mart_model3_trading_signals[adjusted_signal] = "HOLD"
+)
+
+
+6. Net Return moi nhat
+
+M3 Net Return % =
+VAR LastDate =
+    MAX(mart_model3_backtest_daily[trading_date])
+RETURN
+    CALCULATE(
+        MAX(mart_model3_backtest_daily[cumulative_return_net]),
+        mart_model3_backtest_daily[trading_date] = LastDate
+    )
+
+Format: Percentage.
+
+
+7. Net Sharpe tot nhat
+
+M3 Best Net Sharpe =
+MAX(mart_model3_backtest_sweep[Sharpe_Ratio_Net])
+
+
+8. BUY Precision tu adjusted signal
+Luu y: day la cach tinh tu bang prediction, co the khac mot chut voi HTML neu dashboard co logic rieng.
+
+M3 BUY Precision % =
+VAR BuyRows =
+    FILTER(
+        mart_model3_trading_signals,
+        mart_model3_trading_signals[adjusted_signal] = "BUY"
+    )
+VAR CorrectBuy =
+    FILTER(
+        BuyRows,
+        mart_model3_trading_signals[target_signal] = "BUY"
+    )
+RETURN
+    DIVIDE(COUNTROWS(CorrectBuy), COUNTROWS(BuyRows))
+
+Format: Percentage.
+
+
+9. SELL Precision tu adjusted signal
+
+M3 SELL Precision % =
+VAR SellRows =
+    FILTER(
+        mart_model3_trading_signals,
+        mart_model3_trading_signals[adjusted_signal] = "SELL"
+    )
+VAR CorrectSell =
+    FILTER(
+        SellRows,
+        mart_model3_trading_signals[target_signal] = "SELL"
+    )
+RETURN
+    DIVIDE(COUNTROWS(CorrectSell), COUNTROWS(SellRows))
+
+Format: Percentage.
+
+
+Cach tao visual:
+- Visual: Card
+- Value: tung measure o tren
+- Title:
+  Accuracy
+  BUY Precision
+  SELL Precision
+  Macro F1
+  Net Return
+  Net Sharpe
+
+
+PHAN 3 - BACKTEST CURVE
+=======================
+Trong HTML:
+- Ten section: Backtest Curve
+- Co 3 duong:
+  Gross
+  Net
+  Benchmark
+
+Visual Power BI:
+- Line chart
+
+Bang:
+- mart_model3_backtest_daily
+
+Fields:
+- X-axis:
+  trading_date
+
+- Y-axis:
+  cumulative_return
+  cumulative_return_net
+  benchmark_cumulative_return
+
+Ten hien thi:
+- cumulative_return -> Gross Return
+- cumulative_return_net -> Net Return
+- benchmark_cumulative_return -> Benchmark
+
+Format:
+- Y-axis format: Percentage.
+- Gross: teal #2A9D8F
+- Net: navy #1D3557
+- Benchmark: red #D1495B
+
+Y nghia thuyet trinh:
+Backtest Curve cho thay loi nhuan tich luy cua chien luoc Model 3, so sanh truoc chi phi, sau chi phi va benchmark thi truong.
+
+
+PHAN 4 - SIGNAL DISTRIBUTION
+============================
+Trong HTML co 3 khoi:
+1. Actual
+   SELL 29,432
+   HOLD 61,250
+   BUY 28,039
+
+2. Model
+   SELL 22,379
+   HOLD 83,796
+   BUY 12,546
+
+3. Adjusted
+   SELL 1,993
+   HOLD 115,994
+   BUY 734
+
+Power BI co 2 cach lam:
+
+Cach A - Lam 3 donut chart
+--------------------------
+Visual:
+- Donut chart
+
+Donut 1: Actual Distribution
+- Legend: target_signal
+- Values: Count of rows / Count of symbol
+- Bang: mart_model3_trading_signals
+
+Donut 2: Raw Model Distribution
+- Legend: predicted_signal
+- Values: Count of rows / Count of symbol
+- Bang: mart_model3_trading_signals
+
+Donut 3: Adjusted Signal Distribution
+- Legend: adjusted_signal
+- Values: Count of rows / Count of symbol
+- Bang: mart_model3_trading_signals
+
+
+Cach B - Lam 1 clustered column chart
+-------------------------------------
+Neu muon don gian hon:
+- Visual: Clustered column chart
+- X-axis: adjusted_signal
+- Y-axis: Count of rows
+
+Y nghia thuyet trinh:
+Signal distribution cho thay model co xu huong tao nhieu HOLD, it BUY/SELL hon sau khi ap dung rule dieu chinh de giam giao dich nhiễu.
+
+
+PHAN 5 - MARKET STRIP MOI NHAT
+==============================
+Trong HTML co dong thong tin:
+- Latest date: 2026-05-20
+- Symbols: 203
+- BUY: 0
+- HOLD: 202
+- SELL: 1
+
+Power BI visual:
+- 5 card nho hoac multi-row card.
+
+DAX goi y:
+
+M3 Latest Date =
+MAX(mart_model3_trading_signals[trading_date])
+
+
+M3 Latest Symbols =
+VAR LastDate =
+    MAX(mart_model3_trading_signals[trading_date])
+RETURN
+    CALCULATE(
+        DISTINCTCOUNT(mart_model3_trading_signals[symbol]),
+        mart_model3_trading_signals[trading_date] = LastDate
+    )
+
+
+M3 Latest BUY =
+VAR LastDate =
+    MAX(mart_model3_trading_signals[trading_date])
+RETURN
+    CALCULATE(
+        COUNTROWS(mart_model3_trading_signals),
+        mart_model3_trading_signals[trading_date] = LastDate,
+        mart_model3_trading_signals[adjusted_signal] = "BUY"
+    )
+
+
+M3 Latest HOLD =
+VAR LastDate =
+    MAX(mart_model3_trading_signals[trading_date])
+RETURN
+    CALCULATE(
+        COUNTROWS(mart_model3_trading_signals),
+        mart_model3_trading_signals[trading_date] = LastDate,
+        mart_model3_trading_signals[adjusted_signal] = "HOLD"
+    )
+
+
+M3 Latest SELL =
+VAR LastDate =
+    MAX(mart_model3_trading_signals[trading_date])
+RETURN
+    CALCULATE(
+        COUNTROWS(mart_model3_trading_signals),
+        mart_model3_trading_signals[trading_date] = LastDate,
+        mart_model3_trading_signals[adjusted_signal] = "SELL"
+    )
+
+
+PHAN 6 - TOP BUY CANDIDATES / WATCHLIST
+=======================================
+Trong HTML:
+- Bang "Top BUY Candidates / Watchlist"
+- Cot:
+  Date
+  Symbol
+  Signal
+  Close
+  Volume
+  P(BUY)
+  P(SELL)
+  Margin
+
+Visual Power BI:
+- Table
+
+Bang:
+- mart_model3_trading_signals
+
+Columns:
+- trading_date
+- symbol
+- adjusted_signal
+- close
+- volume
+- buy_probability
+- sell_probability
+- buy_sell_margin
+
+Filter goi y:
+- buy_probability is not blank
+- buy_probability >= sell_probability
+- Top N = 10 theo buy_probability lon nhat
+
+Sort:
+- buy_probability descending
+
+Format:
+- buy_probability: Percentage
+- sell_probability: Percentage
+- buy_sell_margin: Decimal 3 chu so
+- close: Number
+- volume: Number, co dau phan tach hang nghin
+
+Conditional formatting:
+- buy_probability mau xanh.
+- adjusted_signal BUY mau xanh, HOLD mau xam.
+
+Y nghia thuyet trinh:
+Bang nay la danh sach cac ma co xac suat BUY cao nhat hoac dang nam trong watchlist mua.
+
+
+PHAN 7 - TOP SELL / RISK WATCHLIST
+==================================
+Trong HTML:
+- Bang "Top SELL / Risk Watchlist"
+- Cot giong Top BUY.
+
+Visual Power BI:
+- Table
+
+Bang:
+- mart_model3_trading_signals
+
+Columns:
+- trading_date
+- symbol
+- adjusted_signal
+- close
+- volume
+- buy_probability
+- sell_probability
+- buy_sell_margin
+
+Filter goi y:
+- sell_probability is not blank
+- sell_probability >= buy_probability
+- Top N = 10 theo sell_probability lon nhat
+
+Sort:
+- sell_probability descending
+
+Conditional formatting:
+- sell_probability mau do.
+- adjusted_signal SELL mau do, HOLD mau xam.
+
+Y nghia thuyet trinh:
+Bang nay la danh sach cac ma co xac suat SELL cao, co the coi nhu watchlist rui ro/giam gia.
+
+
+PHAN 8 - INSIGHTS / NHAN XET
+============================
+Trong HTML co insight list:
+- Adjusted signal accuracy is 52.69%, compared with raw model accuracy 56.30%.
+- Backtest net return is 223.39% with net Sharpe 1.370.
+- Strongest BUY candidate is BHP with P(BUY) 73.8%.
+- Highest-risk SELL signal is AGX with P(SELL) 76.9%.
+
+Power BI visual:
+- Text box
+
+Goi y noi dung tieng Viet:
+Nhan xet:
+- Model 3 dat accuracy raw khoang 56.30%.
+- Sau khi dieu chinh tin hieu, model giao dich it hon va thien ve HOLD de giam nhiễu.
+- Backtest net return dat khoang 223.39% voi Net Sharpe 1.370 trong dashboard goc.
+- Cac bang BUY/SELL watchlist giup xem co phieu tiem nang va co phieu can canh bao.
+
+Luu y:
+- Neu du lieu refresh thay doi, cac so nay co the thay doi.
+- Neu can chinh xac dong theo Power BI, dung card/measure thay vi text co dinh.
+
+
+PHAN 9 - CONFUSION MATRIX
+=========================
+Trong HTML:
+Bang Confusion Matrix co hang Actual va cot Predicted:
+
+Actual / Pred | SELL | HOLD | BUY
+SELL          | 10,285 | 16,152 | 2,995
+HOLD          | 6,548  | 50,854 | 3,848
+BUY           | 5,546  | 16,790 | 5,703
+
+Power BI visual:
+- Matrix
+
+Bang:
+- mart_model3_trading_signals
+
+Fields:
+- Rows:
+  target_signal
+
+- Columns:
+  predicted_signal
+
+- Values:
+  Count of rows hoac Count of symbol
+
+Neu muon confusion matrix cua signal sau dieu chinh:
+- Columns:
+  adjusted_signal
+
+Format:
+- Conditional formatting -> Background color theo value.
+- SELL mau do, HOLD mau xam, BUY mau xanh neu lam column/row color.
+
+Y nghia thuyet trinh:
+Confusion Matrix giup xem model hay nham lan giua SELL, HOLD va BUY. Trong dashboard goc, HOLD la class chiem ty trong lon nen model du doan HOLD nhieu.
+
+
+PHAN 10 - TOP FEATURE IMPORTANCE
+================================
+Trong HTML:
+Top feature importance gom cac feature lon nhat:
+- volatility_20d
+- return_3d
+- volatility_5d
+- return_1d
+- daily_range
+- price_vs_ma20
+- volume
+- return_5d
+- close_position
+- volume_ma_5
+- drawdown_20d
+- rolling_max_20d
+
+Visual Power BI:
+- Clustered bar chart
+
+Bang:
+- mart_model3_feature_importance
+
+Fields:
+- Y-axis:
+  feature
+
+- X-axis:
+  importance
+
+Sort:
+- importance descending
+
+Filter:
+- Top N = 12 theo importance
+
+Y nghia thuyet trinh:
+Feature importance cho thay Model 3 phu thuoc nhieu vao volatility va return ngan han khi tao tin hieu BUY/HOLD/SELL.
+
+
+PHAN 11 - BEST BACKTEST CONFIGURATIONS
+======================================
+Trong HTML:
+Bang "Best Backtest Configurations" co cac cot:
+- Top_K
+- Min_Volume
+- Min_Close
+- Min_Buy_Probability
+- Cumulative_Return_Net
+- Sharpe_Ratio_Net
+- Trade_Days
+
+Visual Power BI:
+- Table
+
+Bang:
+- mart_model3_backtest_sweep
+
+Columns nen dung:
+- Top_K
+- Min_Volume
+- Min_Close
+- Min_Buy_Probability
+- Cumulative_Return_Net
+- Sharpe_Ratio_Net
+- Trade_Days
+
+Sort:
+- Cumulative_Return_Net descending
+hoac
+- Sharpe_Ratio_Net descending
+
+Format:
+- Cumulative_Return_Net: Percentage
+- Min_Buy_Probability: Percentage
+- Sharpe_Ratio_Net: Decimal 3 chu so
+
+Y nghia thuyet trinh:
+Bang nay so sanh cac cau hinh backtest khac nhau, vi du top 5/top 10/top 20 co phieu, nguong volume, nguong gia, nguong P(BUY). Cau hinh tot se co net return va Sharpe cao.
+
+
+PHAN 12 - SLICER NEN CO
+=======================
+Them cac slicer de page tuong tac:
+
+1. Date slicer
+   - Field: mart_model3_trading_signals[trading_date]
+   - Kieu: Between
+
+2. Symbol slicer
+   - Field: mart_model3_trading_signals[symbol]
+
+3. Sector slicer
+   - Field: mart_model3_trading_signals[sector]
+
+4. Signal slicer
+   - Field: mart_model3_trading_signals[adjusted_signal]
+
+Luu y:
+- Neu slicer lam chart bi trong, xoa filter hoac reset slicer.
+- Page Model 3 nen uu tien slicer date + sector + adjusted_signal.
+
+
+CHECKLIST HOAN THANH PAGE MODEL 3
+=================================
+[ ] Co title "Model 3 - Trading Signal Dashboard".
+[ ] Co subtitle giai thich SELL / HOLD / BUY.
+[ ] Co 6 KPI card: Accuracy, BUY Precision, SELL Precision, Macro F1, Net Return, Net Sharpe.
+[ ] Co line chart Backtest Curve: Gross, Net, Benchmark.
+[ ] Co signal distribution: Actual / Model / Adjusted hoac it nhat adjusted_signal.
+[ ] Co Top BUY Candidates table.
+[ ] Co Top SELL / Risk Watchlist table.
+[ ] Co Confusion Matrix.
+[ ] Co Feature Importance chart.
+[ ] Co Best Backtest Configurations table.
+[ ] Co slicer date / sector / symbol / signal.
+[ ] Probability va return da format thanh %.
+[ ] BUY mau xanh, HOLD mau xam, SELL mau do.
+[ ] Khong co bang/chart bi trong.
+
+
+BO CUC TOI THIEU NEU CAN LAM NHANH
+==================================
+Neu khong du thoi gian, chi can lam 6 visual sau:
+
+1. 4-6 KPI cards tren cung.
+2. Line chart Backtest Curve.
+3. Donut chart Adjusted Signal Distribution.
+4. Table Top BUY Candidates.
+5. Table Top SELL / Risk Watchlist.
+6. Bar chart Feature Importance.
+
+Day la ban toi thieu nhung van the hien dung tinh than dashboard Model 3.
+
+
+CAU THUYET TRINH NGAN
+=====================
+"Page Model 3 trinh bay mo hinh sinh tin hieu giao dich BUY/HOLD/SELL. Mo hinh dung XGBoost classifier, dau ra gom xac suat BUY, HOLD, SELL va adjusted_signal sau khi ap dung rule loc tin hieu. Power BI truc quan hoa accuracy, precision, signal distribution, watchlist mua/ban, backtest return va feature importance de danh gia hieu qua chien luoc."

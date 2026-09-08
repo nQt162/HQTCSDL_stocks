@@ -1,0 +1,47 @@
+{
+  "Accuracy": 55.22625,
+  "Macro_Precision": 0.4912217401957122,
+  "Macro_Recall": 0.4646792456499025,
+  "Macro_F1": 0.46548011217740437,
+  "Adjusted_Accuracy": 55.010000000000005,
+  "Adjusted_Macro_Precision": 0.5629336281043559,
+  "Adjusted_Macro_Recall": 0.39608018026244657,
+  "Adjusted_Macro_F1": 0.3594268287535203,
+  "Baseline_Accuracy": 51.675000000000004,
+  "Baseline_Label": "HOLD",
+  "Selected_Confidence_Threshold": 0.5,
+  "Confusion_Matrix": [
+    [
+      7521,
+      9783,
+      2524
+    ],
+    [
+      5473,
+      32235,
+      3632
+    ],
+    [
+      4141,
+      10266,
+      4425
+    ]
+  ],
+  "Adjusted_Confusion_Matrix": [
+    [
+      3071,
+      16317,
+      440
+    ],
+    [
+      1270,
+      39446,
+      624
+    ],
+    [
+      1174,
+      16167,
+      1491
+    ]
+  ]
+}

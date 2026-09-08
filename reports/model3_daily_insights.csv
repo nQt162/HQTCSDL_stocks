@@ -1,0 +1,6 @@
+insight_date,insight_type,source_model,symbol,sector,severity,metric_name,metric_value,title,message,created_at
+2026-06-04,model3,model3,,,info,adjusted_buy_count,0.0,Model3 BUY signal count,"Model3 has 0 strong BUY signals, 0 strong SELL signals, and 2 HOLD signals on 2026-06-04.",2026-06-15 13:51:59
+2026-06-04,model3,model3,ACB,2,success,buy_probability,0.30181488394737244,Top BUY probability,ACB has the highest BUY probability for Model3 on 2026-06-04.,2026-06-15 13:51:59
+2026-06-04,model3,model3,ACB,2,warning,sell_probability,0.24083220958709717,Top SELL risk,ACB has the highest SELL probability for Model3 on 2026-06-04.,2026-06-15 13:51:59
+2026-06-04,model3,model3,,,info,accuracy,56.87521857149994,Model3 classification accuracy,Model3 test accuracy is 56.88%.,2026-06-15 13:51:59
+2026-06-04,model3,model3,,,success,cumulative_return_net,-0.8294282506856561,Model3 backtest net return,Model3 top BUY backtest net cumulative return is -82.94%.,2026-06-15 13:51:59

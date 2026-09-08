@@ -6,6 +6,7 @@ import json
 import os
 import re
 import sys
+import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -174,27 +175,55 @@ def get_clickhouse_client():
     port = int(os.getenv("CLICKHOUSE_PORT") or "8443")
     username = os.getenv("CLICKHOUSE_USER", os.getenv("CLICKHOUSE_USERNAME", "default"))
     password = os.getenv("CLICKHOUSE_PASSWORD", "")
+    database = os.getenv("CLICKHOUSE_DATABASE", "default")
     secure = os.getenv("CLICKHOUSE_SECURE", "true").strip().lower() in {
         "1",
         "true",
         "yes",
     }
+    connect_timeout = int(os.getenv("CLICKHOUSE_CONNECT_TIMEOUT") or "60")
+    send_receive_timeout = int(os.getenv("CLICKHOUSE_SEND_RECEIVE_TIMEOUT") or "600")
+    query_retries = int(os.getenv("CLICKHOUSE_QUERY_RETRIES") or "3")
+    client_retries = int(os.getenv("CLICKHOUSE_CLIENT_RETRIES") or "3")
+    retry_sleep_seconds = int(os.getenv("CLICKHOUSE_RETRY_SLEEP_SECONDS") or "10")
 
     if not host:
         raise ValueError("CLICKHOUSE_HOST is required in .env")
     if not password:
         raise ValueError("CLICKHOUSE_PASSWORD is required in .env")
 
-    client = clickhouse_connect.get_client(
-        host=host,
-        port=port,
-        username=username,
-        password=password,
-        database=os.getenv("CLICKHOUSE_DATABASE", "default"),
-        secure=secure,
-    )
-    print(f"[clickhouse] Connected: {host}:{port} secure={secure}")
-    return client
+    last_error = None
+    for attempt in range(1, client_retries + 1):
+        try:
+            client = clickhouse_connect.get_client(
+                host=host,
+                port=port,
+                username=username,
+                password=password,
+                database=database,
+                secure=secure,
+                connect_timeout=connect_timeout,
+                send_receive_timeout=send_receive_timeout,
+                query_retries=query_retries,
+            )
+            print(f"[clickhouse] Connected: {host}:{port} secure={secure}")
+            return client
+        except Exception as exc:
+            last_error = exc
+            if attempt >= client_retries:
+                break
+            print(
+                "[clickhouse] Connection attempt "
+                f"{attempt}/{client_retries} failed: {exc}. "
+                f"Retrying in {retry_sleep_seconds}s..."
+            )
+            time.sleep(retry_sleep_seconds)
+
+    raise RuntimeError(
+        "Cannot connect to ClickHouse after "
+        f"{client_retries} attempts. Host={host}, port={port}, "
+        f"secure={secure}, connect_timeout={connect_timeout}s"
+    ) from last_error
 
 
 def quote_identifier(name: str) -> str:

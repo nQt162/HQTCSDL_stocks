@@ -1,9 +1,4 @@
-# ==============================================
-# MODULE 4 — BENCHMARK OUTPERFORMANCE MODEL
-# File: train_benchmark_model.py
-# Mục đích: Đọc từ stock.stock_prices (ClickHouse),
-#           tính features + label, train LightGBM
-# ==============================================
+
 
 from __future__ import annotations
 

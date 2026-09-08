@@ -59,6 +59,11 @@ jobs:
           CLICKHOUSE_PASSWORD: ${{ secrets.CLICKHOUSE_PASSWORD }}
           CLICKHOUSE_DATABASE: ${{ secrets.CLICKHOUSE_DATABASE || 'stock' }}
           CLICKHOUSE_SECURE: ${{ secrets.CLICKHOUSE_SECURE || 'true' }}
+          CLICKHOUSE_CONNECT_TIMEOUT: "60"
+          CLICKHOUSE_SEND_RECEIVE_TIMEOUT: "600"
+          CLICKHOUSE_QUERY_RETRIES: "3"
+          CLICKHOUSE_CLIENT_RETRIES: "3"
+          CLICKHOUSE_RETRY_SLEEP_SECONDS: "10"
         run: python main.py
 
       - name: Upload pipeline artifacts

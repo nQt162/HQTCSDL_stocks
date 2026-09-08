@@ -1,0 +1,8 @@
+﻿metric_group,metric,value
+backtest,test_rows,80000.0
+backtest,buy_signal_rows,2555.0
+backtest,trade_days,346.0
+backtest,hit_rate,0.815028901734104
+backtest,average_return,0.06275007128715515
+backtest,cumulative_return,685326656.0
+backtest,sharpe_ratio,14.727642662786021

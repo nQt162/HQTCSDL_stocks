@@ -1,0 +1,979 @@
+KE HOACH PHAN CONG LAM POWER BI CHO TOAN BO DU AN
+Du an: Stock Prediction System / ClickHouse / Machine Learning / Streamlit / Power BI
+
+Muc tieu cua file Power BI
+==========================
+Power BI trong du an nay khong chi de bao cao Model 4.
+Power BI dung de trinh bay TOAN BO HE THONG:
+
+1. Du lieu co phieu va qua trinh xu ly du lieu.
+2. ClickHouse la kho du lieu trung tam.
+3. Cac bang mart duoc tao san de phuc vu dashboard.
+4. Ket qua cua cac model:
+   - Model 1: du bao gia / expected return.
+   - Model 2: du doan future return.
+   - Model 3: sinh tin hieu giao dich BUY / HOLD / SELL.
+   - Model 4: du doan outperform benchmark.
+   - Model 5: canh bao rui ro co phieu.
+5. Trang tong hop de so sanh vai tro cua cac model.
+
+Thong diep khi bao cao voi thay/co:
+- Streamlit la web demo tuong tac voi model.
+- ClickHouse la database luu du lieu va bang mart.
+- Power BI la lop bao cao BI, giup loc, xem dashboard, xuat PDF/PPT.
+
+
+VAI TRO CUA BAN TRUOC KHI CHIA VIEC
+===================================
+Ban da ket noi duoc Power BI voi ClickHouse, vay ban nen lam "file template" cho ca nhom.
+Nguoi khac se dua tren file template nay de lam page cua minh.
+
+Viec ban can lam dau tien:
+1. Chon cac bang can dung trong Navigator.
+2. Load du lieu vao Power BI.
+3. Tao san cac page trong.
+4. Tao san mot vai measure dung chung.
+5. Luu thanh file mau:
+   powerbi_template.pbix
+6. Gui file template cho cac thanh vien.
+
+Luu y bao mat:
+- Khong ghi password ClickHouse vao file txt, Word, PowerPoint, PDF.
+- Khong chup man hinh file .env.
+- Neu thanh vien khac khong ket noi duoc database, ban co the gop file giup ho thay vi gui password cong khai.
+
+
+CAC BANG NEN CHON TRONG POWER BI
+================================
+Khi mo Navigator cua ClickHouse, khong can chon tat ca bang.
+Chi nen chon cac bang chinh de report gon va de lam.
+
+1. Bang du lieu nen / features
+------------------------------
+Chon cac bang sau neu thay trong Navigator:
+
+- features_all
+- stock_prices
+- stock_symbols
+- symbol_sector_encoding
+- sector_label_encoding
+
+Y nghia:
+- features_all: bang feature ky thuat tong hop, dung cho phan tich gia, volume, MA, volatility.
+- stock_prices: du lieu gia goc neu co.
+- stock_symbols: danh sach ma co phieu.
+- symbol_sector_encoding / sector_label_encoding: map ma co phieu voi nganh neu co.
+
+
+2. Bang Model 1 - Price forecast / expected return
+--------------------------------------------------
+Chon cac bang sau neu co:
+
+- mart_model1_price_forecast
+- mart_model1_top_expected_return
+- mart_model1_prediction_accuracy
+- mart_model1_feature_importance
+- mart_model1_backtest_daily
+- mart_model1_backtest_sweep
+- mart_model1_metrics
+- mart_model1_backtest_metrics
+
+Y nghia:
+- Dung de bao cao model du bao gia / expected return.
+- Co the ve top co phieu ky vong sinh loi cao.
+- Co the xem backtest cua chien luoc.
+
+
+3. Bang Model 2 - Future return prediction
+------------------------------------------
+Chon cac bang sau neu co:
+
+- mart_model2_future_return
+- mart_model2_prediction_error
+- mart_model2_feature_importance
+- mart_model2_backtest_daily
+- mart_model2_backtest_sweep
+- mart_model2_metrics
+- mart_model2_backtest_metrics
+
+Y nghia:
+- Dung de bao cao du doan loi suat tuong lai.
+- Co the xem predicted return, actual return, prediction error.
+- Co the xem feature importance va backtest.
+
+
+4. Bang Model 3 - Trading signals
+---------------------------------
+Chon cac bang sau neu co:
+
+- mart_model3_trading_signals
+- mart_model3_signal_summary
+- mart_model3_backtest_daily
+- mart_model3_metrics
+- mart_model3_daily_insights
+- mart_model3_feature_importance
+- mart_model3_backtest_sweep
+
+Y nghia:
+- Dung de bao cao tin hieu BUY / HOLD / SELL.
+- Co the xem phan bo tin hieu theo ngay / theo ma.
+- Co the xem backtest cua chien luoc theo tin hieu.
+
+
+5. Bang Model 4 - Benchmark outperformance
+------------------------------------------
+Chon cac bang sau neu co:
+
+- mart_model4_benchmark_outperformance
+- mart_model4_top_outperformers
+- mart_model4_daily_outperform_summary
+- mart_model4_sector_outperform
+- mart_model4_metrics
+- mart_model4_feature_importance
+
+Y nghia:
+- Dung de bao cao co phieu nao du doan vuot benchmark.
+- Co top outperformers, daily summary, sector summary, metrics, feature importance.
+
+
+6. Bang Model 5 - Risk alerts
+-----------------------------
+Chon cac bang sau neu co:
+
+- mart_model5_risk_features
+- mart_model5_risk_predictions
+- mart_model5_risk_test_evaluation
+- mart_model5_risk_alerts
+- mart_model5_feature_importance
+- mart_model5_backtest_risk_alerts
+- mart_model5_metrics
+
+Y nghia:
+- Dung de bao cao canh bao rui ro.
+- Co risk_probability, risk_label, high risk alerts.
+- Co the loc cac ma co phieu rui ro cao.
+
+
+7. Bang audit / data quality neu muon them page chat luong du lieu
+------------------------------------------------------------------
+Chon cac bang sau neu co:
+
+- audit_clean_log_rows
+- audit_khaosat_rows
+- audit_table_keys
+- audit_table_relationships
+- audit_upload_manifest
+
+Y nghia:
+- Dung de chung minh pipeline co buoc khao sat, lam sach, audit du lieu.
+- Page nay rat hop khi thay/co hoi ve chat luong du lieu.
+
+
+GOI Y CHON IMPORT HAY DIRECTQUERY
+=================================
+Khi Power BI hoi Data Connectivity mode:
+
+1. DirectQuery
+   - Du lieu doc truc tiep tu ClickHouse.
+   - Hay de chung minh Power BI ket noi database that.
+   - Co the cham hon khi ve nhieu bieu do.
+
+2. Import
+   - Du lieu nap vao file Power BI.
+   - Bieu do thuong nhanh hon.
+   - File .pbix co the nang hon.
+
+Goi y:
+- Neu may va mang chay on: dung DirectQuery.
+- Neu bieu do qua cham: dung Import.
+- Khi nop bao cao, ca hai deu chap nhan duoc. Quan trong la giai thich duoc vi sao chon.
+
+
+CAC PAGE CAN TAO TRONG FILE TEMPLATE
+====================================
+O duoi cung Power BI, tao san cac page sau:
+
+01_Tong_quan_he_thong
+02_Du_lieu_co_phieu
+03_Model1_Gia_ExpectedReturn
+04_Model2_FutureReturn
+05_Model3_TradingSignals
+06_Model4_Outperformance
+07_Model5_RiskAlerts
+08_Audit_Pipeline
+09_Tong_hop_so_sanh
+
+Neu nhom it nguoi, co the bo Page 08 hoac gop Page 08 vao Page 01.
+
+
+CAC MEASURE DUNG CHUNG NEN TAO
+==============================
+Vao Modeling -> New measure.
+Neu Power BI bao loi do ten bang/cot khong ton tai, bo qua measure do hoac sua lai ten bang dung voi Fields cua ban.
+
+1. Dem so dong features
+-----------------------
+Feature Rows =
+COUNTROWS(features_all)
+
+
+2. So ma co phieu
+-----------------
+Symbol Count =
+DISTINCTCOUNT(features_all[symbol])
+
+
+3. So ngay giao dich
+--------------------
+Trading Day Count =
+DISTINCTCOUNT(features_all[trading_date])
+
+
+4. Gia dong cua trung binh
+--------------------------
+Average Close =
+AVERAGE(features_all[close])
+
+
+5. Model 4 - tong so du doan
+----------------------------
+M4 Total Predictions =
+COUNTROWS(mart_model4_benchmark_outperformance)
+
+
+6. Model 4 - so du doan dung
+----------------------------
+M4 Correct Predictions =
+SUM(mart_model4_benchmark_outperformance[prediction_correct])
+
+
+7. Model 4 - accuracy
+---------------------
+M4 Accuracy % =
+DIVIDE([M4 Correct Predictions], [M4 Total Predictions])
+
+
+8. Model 4 - xac suat outperform trung binh
+-------------------------------------------
+M4 Avg Outperform Probability =
+AVERAGE(mart_model4_benchmark_outperformance[outperform_probability])
+
+
+9. Model 5 - xac suat rui ro trung binh
+---------------------------------------
+M5 Avg Risk Probability =
+AVERAGE(mart_model5_risk_predictions[risk_probability])
+
+
+10. Model 5 - so canh bao high risk
+-----------------------------------
+M5 High Risk Count =
+COUNTROWS(
+    FILTER(
+        mart_model5_risk_predictions,
+        mart_model5_risk_predictions[risk_label] = "HIGH_RISK"
+    )
+)
+
+
+Luu y format:
+- Cac measure co dau % nen format la Percentage.
+- Cac gia tri probability cung nen format Percentage.
+- Cac gia tri tien/gia co phieu nen format Number, co dau phan tach hang nghin.
+
+
+PHAN CONG THEO NHOM
+===================
+
+Neu nhom 5 nguoi:
+- Nguoi 1: Page 01 + Page 09
+- Nguoi 2: Page 02 + Page 03
+- Nguoi 3: Page 04
+- Nguoi 4: Page 05 + Page 06
+- Nguoi 5: Page 07 + Page 08 + gop file
+
+Neu nhom 6 nguoi:
+- Nguoi 1: Page 01 + Page 09
+- Nguoi 2: Page 02
+- Nguoi 3: Page 03 + Page 04
+- Nguoi 4: Page 05
+- Nguoi 5: Page 06 + Page 07
+- Nguoi 6: Page 08 + gop file + kiem tra format
+
+Neu nhom 4 nguoi:
+- Nguoi 1: Page 01 + Page 09 + gop file
+- Nguoi 2: Page 02 + Page 03
+- Nguoi 3: Page 04 + Page 05
+- Nguoi 4: Page 06 + Page 07
+- Page 08 lam them neu con thoi gian.
+
+
+HUONG DAN CHI TIET TUNG PAGE
+============================
+
+PAGE 01 - TONG QUAN HE THONG
+----------------------------
+Nguoi phu trach:
+Nguoi 1 / truong nhom.
+
+Muc tieu:
+Gioi thieu toan bo du an trong 1 man hinh.
+Nguoi xem can hieu duoc:
+- Du an lay du lieu co phieu.
+- Xu ly va tao features.
+- Train nhieu model ML.
+- Luu ket qua vao ClickHouse.
+- Streamlit dung de demo app.
+- Power BI dung de bao cao.
+
+Bang can dung:
+- features_all
+- mart_model1_metrics neu co
+- mart_model2_metrics neu co
+- mart_model3_metrics neu co
+- mart_model4_metrics neu co
+- mart_model5_metrics neu co
+- audit_upload_manifest neu co
+
+Visual nen co:
+1. Text box: tieu de
+   Noi dung goi y:
+   "Stock Prediction System - ClickHouse, ML Models, Streamlit, Power BI"
+
+2. Card: so ma co phieu
+   - Field/Measure: Symbol Count
+
+3. Card: so ngay giao dich
+   - Field/Measure: Trading Day Count
+
+4. Card: so dong features
+   - Field/Measure: Feature Rows
+
+5. Card: so model
+   - Co the dung Text box ghi "5 ML Models"
+
+6. Shape / Text boxes mo ta pipeline
+   Tao 5 hop noi nhau:
+   Raw CSV -> Clean Data -> Feature Engineering -> ML Models -> ClickHouse Marts -> Streamlit/Power BI
+
+7. Table nho: vai tro tung model
+   Co the tao bang thu cong bang Enter Data:
+   Model | Bai toan | Output chinh
+   Model 1 | Price / expected return | predicted price, expected return
+   Model 2 | Future return | predicted future return
+   Model 3 | Trading signal | BUY / HOLD / SELL
+   Model 4 | Benchmark outperformance | outperform probability
+   Model 5 | Risk alert | risk probability, HIGH_RISK/LOW_RISK
+
+Bo cuc goi y:
+- Hang tren: tieu de + 4 card KPI.
+- Giua: pipeline diagram.
+- Duoi: bang vai tro cac model.
+
+Checklist:
+[ ] Nguoi xem nhin page nay hieu du an lam gi.
+[ ] Khong qua nhieu chart kho doc.
+[ ] Khong co thong tin password/env.
+[ ] Ten cac thanh phan ro rang.
+
+
+PAGE 02 - PHAN TICH DU LIEU CO PHIEU
+------------------------------------
+Nguoi phu trach:
+Nguoi 2.
+
+Muc tieu:
+Phan tich du lieu gia co phieu va cac feature ky thuat.
+
+Bang can dung:
+- features_all
+- stock_symbols neu co
+- symbol_sector_encoding neu co
+
+Visual nen co:
+1. Slicer: chon symbol
+   - Visual: Slicer
+   - Field: features_all[symbol]
+   - Nen bat Single select neu co.
+
+2. Slicer: chon ngay
+   - Visual: Slicer
+   - Field: features_all[trading_date]
+   - Kieu: Between
+
+3. Line chart: gia dong cua
+   - Visual: Line chart
+   - X-axis: trading_date
+   - Y-axis: close hoac Average Close
+
+4. Line chart: MA5, MA20, MA50
+   - Visual: Line chart
+   - X-axis: trading_date
+   - Y-axis: ma_5, ma_20, ma_50
+   - Summarization: Average
+
+5. Column chart: volume
+   - Visual: Clustered column chart
+   - X-axis: trading_date
+   - Y-axis: volume neu co, hoac volume_ma_20
+
+6. Line/Area chart: volatility
+   - Visual: Line chart hoac Area chart
+   - X-axis: trading_date
+   - Y-axis: volatility_20d
+
+Luu y rat quan trong:
+- Neu Y-axis hien "Sum of close", bieu do co the sai neu dang chon nhieu symbol.
+- Cach dung dung:
+  1. Bat slicer symbol va chi chon 1 symbol.
+  2. Hoac doi close thanh Average.
+
+Noi khi thuyet trinh:
+"Page nay cho phep xem xu huong gia, volume va cac chi bao ky thuat cua tung ma co phieu. Day la du lieu dau vao quan trong cho cac model."
+
+Checklist:
+[ ] Slicer symbol hoat dong.
+[ ] Slicer date hoat dong.
+[ ] Gia khong bi cong tong sai y nghia.
+[ ] Truc X sap xep theo thoi gian tang dan.
+
+
+PAGE 03 - MODEL 1: GIA / EXPECTED RETURN
+----------------------------------------
+Nguoi phu trach:
+Nguoi 2 hoac nguoi 3.
+
+Muc tieu:
+Bao cao Model 1 du bao gia / expected return va ket qua backtest.
+
+Bang can dung:
+- mart_model1_price_forecast
+- mart_model1_top_expected_return
+- mart_model1_prediction_accuracy
+- mart_model1_feature_importance
+- mart_model1_backtest_daily
+- mart_model1_metrics
+
+Visual nen co:
+1. Card: metric chinh cua Model 1
+   - Neu bang metrics co rmse/mae/r2 thi dung cac metric do.
+   - Neu metrics la dang key-value, dung Table thay Card.
+
+2. Table: du bao gia / forecast
+   - Visual: Table
+   - Columns goi y:
+     symbol, prediction_date, close, predicted_close, expected_return
+   - Neu ten cot khac, chon cot co y nghia tuong tu.
+
+3. Bar chart: Top expected return
+   - Visual: Clustered bar chart
+   - Y-axis: symbol
+   - X-axis: expected_return hoac predicted_return
+   - Sort giam dan.
+
+4. Line chart: backtest cumulative return
+   - Visual: Line chart
+   - X-axis: trading_date hoac prediction_date
+   - Y-axis: cumulative_return neu co.
+
+5. Bar chart: feature importance
+   - Visual: Clustered bar chart
+   - Y-axis: feature
+   - X-axis: importance
+   - Sort giam dan.
+
+Noi khi thuyet trinh:
+"Model 1 tap trung vao du bao gia hoac expected return. Page nay cho thay model de xuat cac ma co expected return cao va kiem tra hieu qua qua backtest."
+
+Checklist:
+[ ] Top expected return sap xep giam dan.
+[ ] Backtest co truc thoi gian dung.
+[ ] Feature importance sap xep tu cao den thap.
+[ ] Neu cot khong ton tai, dung cot gan nghia nhat va doi title cho dung.
+
+
+PAGE 04 - MODEL 2: FUTURE RETURN
+--------------------------------
+Nguoi phu trach:
+Nguoi 3.
+
+Muc tieu:
+Bao cao Model 2 du doan future return va sai so du doan.
+
+Bang can dung:
+- mart_model2_future_return
+- mart_model2_prediction_error
+- mart_model2_feature_importance
+- mart_model2_backtest_daily
+- mart_model2_backtest_sweep
+- mart_model2_metrics
+
+Visual nen co:
+1. Card/Table: metrics Model 2
+   - Dung mart_model2_metrics.
+   - Neu co MAE, RMSE, R2 thi tao card.
+   - Neu metrics o dang key-value thi tao Table.
+
+2. Scatter chart: predicted return vs actual return
+   - Visual: Scatter chart
+   - X-axis: predicted_future_return_5d hoac predicted_return
+   - Y-axis: future_return_5d hoac actual_return
+   - Details: symbol
+
+3. Bar chart: prediction error theo symbol
+   - Visual: Clustered bar chart
+   - Y-axis: symbol
+   - X-axis: abs_error hoac prediction_error
+   - Sort theo abs_error giam dan de thay ma kho du doan.
+
+4. Line chart: backtest cumulative return
+   - Visual: Line chart
+   - X-axis: trading_date hoac prediction_date
+   - Y-axis: cumulative_return
+
+5. Bar chart: feature importance
+   - Visual: Clustered bar chart
+   - Y-axis: feature
+   - X-axis: importance
+
+Noi khi thuyet trinh:
+"Model 2 du doan loi suat tuong lai. Page nay danh gia do lech giua predicted return va actual return, dong thoi xem feature nao tac dong manh den model."
+
+Checklist:
+[ ] Scatter chart co predicted va actual dung truc.
+[ ] Error chart sap xep de thay ma loi nhieu.
+[ ] Metrics Model 2 hien ro.
+[ ] Bieu do khong bi trong do chon sai bang.
+
+
+PAGE 05 - MODEL 3: TRADING SIGNALS
+----------------------------------
+Nguoi phu trach:
+Nguoi 4.
+
+Muc tieu:
+Bao cao Model 3 sinh tin hieu giao dich BUY / HOLD / SELL.
+
+Bang can dung:
+- mart_model3_trading_signals
+- mart_model3_signal_summary
+- mart_model3_backtest_daily
+- mart_model3_metrics
+- mart_model3_feature_importance
+- mart_model3_backtest_sweep
+
+Visual nen co:
+1. Card: accuracy / macro F1 / adjusted accuracy
+   - Dung mart_model3_metrics neu co.
+
+2. Donut chart: phan bo tin hieu
+   - Visual: Donut chart
+   - Legend: signal / adjusted_signal / predicted_signal
+   - Values: Count of symbol
+
+3. Column chart: so tin hieu theo ngay
+   - Visual: Stacked column chart
+   - X-axis: trading_date
+   - Legend: signal
+   - Y-axis: Count of symbol
+
+4. Table: danh sach tin hieu moi nhat
+   - Columns goi y:
+     symbol, trading_date, signal, buy_probability, hold_probability, sell_probability
+
+5. Line chart: backtest cumulative return
+   - X-axis: trading_date
+   - Y-axis: cumulative_return neu co.
+
+6. Bar chart: feature importance
+   - Y-axis: feature
+   - X-axis: importance
+
+Noi khi thuyet trinh:
+"Model 3 bien dau ra du doan thanh tin hieu giao dich. Page nay giup xem model dang de xuat BUY/HOLD/SELL ra sao va backtest cua chien luoc co tot khong."
+
+Checklist:
+[ ] Donut chart co BUY/HOLD/SELL.
+[ ] Signal table loc duoc theo symbol/date.
+[ ] Backtest co duong loi nhuan neu du lieu co.
+[ ] Khong nham signal thuc te voi signal du doan.
+
+
+PAGE 06 - MODEL 4: BENCHMARK OUTPERFORMANCE
+-------------------------------------------
+Nguoi phu trach:
+Nguoi 4 hoac nguoi 5.
+
+Muc tieu:
+Bao cao Model 4 du doan co phieu co vuot benchmark trong 5 ngay toi hay khong.
+
+Bang can dung:
+- mart_model4_benchmark_outperformance
+- mart_model4_top_outperformers
+- mart_model4_daily_outperform_summary
+- mart_model4_sector_outperform
+- mart_model4_metrics
+- mart_model4_feature_importance
+
+Visual nen co:
+1. Card: Accuracy
+   - Field: accuracy tu mart_model4_metrics
+   - Hoac measure M4 Accuracy %
+
+2. Card: Precision
+   - Field: precision
+
+3. Card: Recall
+   - Field: recall
+
+4. Card: F1-score
+   - Field: f1
+
+5. Bar chart: Top outperformers
+   - Y-axis: symbol
+   - X-axis: outperform_probability
+   - Sort giam dan.
+
+6. Line chart: accuracy theo ngay
+   - X-axis: trading_date
+   - Y-axis: accuracy_daily
+   - Bang: mart_model4_daily_outperform_summary
+
+7. Bar chart: accuracy theo nganh
+   - Y-axis: encode_sector hoac ten nganh neu co
+   - X-axis: accuracy_sector
+   - Bang: mart_model4_sector_outperform
+
+8. Bar chart: feature importance
+   - Y-axis: feature
+   - X-axis: importance
+
+Noi khi thuyet trinh:
+"Model 4 tra loi cau hoi: co phieu nay co kha nang vuot benchmark thi truong trong 5 ngay toi khong. Dau ra quan trong la outperform_probability."
+
+Checklist:
+[ ] Probability hien dang %.
+[ ] Top outperformers sap xep dung.
+[ ] Daily accuracy co truc thoi gian dung.
+[ ] Feature importance sap xep tu cao den thap.
+
+
+PAGE 07 - MODEL 5: RISK ALERTS
+------------------------------
+Nguoi phu trach:
+Nguoi 5.
+
+Muc tieu:
+Bao cao Model 5 canh bao rui ro cua co phieu.
+
+Bang can dung:
+- mart_model5_risk_predictions
+- mart_model5_risk_alerts
+- mart_model5_risk_test_evaluation
+- mart_model5_feature_importance
+- mart_model5_metrics
+- mart_model5_backtest_risk_alerts
+
+Visual nen co:
+1. Card: Avg risk probability
+   - Measure: M5 Avg Risk Probability
+   - Hoac field risk_probability voi Average.
+
+2. Card: High risk count
+   - Measure: M5 High Risk Count
+
+3. Slicer: symbol
+   - Field: symbol
+
+4. Slicer: prediction_date
+   - Field: prediction_date
+
+5. Bar chart: Top high-risk symbols
+   - Y-axis: symbol
+   - X-axis: risk_probability
+   - Filter: risk_label = HIGH_RISK
+   - Sort giam dan.
+
+6. Line chart: risk probability theo thoi gian
+   - X-axis: prediction_date
+   - Y-axis: risk_probability
+   - Aggregation: Average
+
+7. Donut chart: phan bo risk label
+   - Legend: risk_label
+   - Values: Count of rows
+
+8. Bar chart: feature importance
+   - Y-axis: feature
+   - X-axis: importance
+
+Noi khi thuyet trinh:
+"Model 5 bo sung goc nhin quan tri rui ro. Khong chi tim co phieu co tiem nang, he thong con can canh bao cac ma co kha nang rui ro cao."
+
+Checklist:
+[ ] High-risk chart chi hien HIGH_RISK.
+[ ] Risk probability format %.
+[ ] Slicer symbol/date hoat dong.
+[ ] Feature importance co du lieu.
+
+
+PAGE 08 - AUDIT / PIPELINE / CHAT LUONG DU LIEU
+-----------------------------------------------
+Nguoi phu trach:
+Nguoi 5 hoac truong nhom.
+
+Muc tieu:
+Chung minh du an co quy trinh xu ly du lieu, audit va kiem tra chat luong.
+
+Bang can dung:
+- audit_clean_log_rows
+- audit_khaosat_rows
+- audit_table_keys
+- audit_table_relationships
+- audit_upload_manifest
+
+Visual nen co:
+1. Table: upload manifest
+   - Columns goi y:
+     table_name, source_path, row_count, uploaded_at, status
+
+2. Card: so bang duoc upload
+   - Count distinct table_name tu audit_upload_manifest neu co.
+
+3. Card: tong so dong upload
+   - Sum row_count neu co.
+
+4. Bar chart: row_count theo table
+   - X-axis: table_name
+   - Y-axis: row_count
+
+5. Table: data cleaning log
+   - Dung audit_clean_log_rows neu co.
+
+6. Table: relationships / keys
+   - Dung audit_table_relationships hoac audit_table_keys.
+
+Noi khi thuyet trinh:
+"Page nay cho thay du lieu khong chi duoc train model truc tiep, ma co cac buoc khao sat, lam sach, kiem tra khoa va upload vao ClickHouse."
+
+Checklist:
+[ ] Khong hien qua nhieu dong lam roi.
+[ ] Co row_count / uploaded_at neu du lieu co.
+[ ] Page nay dung de ho tro bao cao, khong can qua dep.
+
+
+PAGE 09 - TONG HOP SO SANH CAC MODEL
+------------------------------------
+Nguoi phu trach:
+Truong nhom / Nguoi 1.
+
+Muc tieu:
+Ket luan toan bo du an va so sanh vai tro cac model.
+
+Cach lam don gian nhat:
+Dung Enter Data tao bang thu cong:
+
+Model | Bai toan | Dau ra | Dung de lam gi
+Model 1 | Price / expected return | Predicted price, expected return | Tim co phieu co tiem nang loi nhuan
+Model 2 | Future return | Predicted future return | Uoc tinh loi suat 5 ngay toi
+Model 3 | Trading signal | BUY/HOLD/SELL | Ho tro quyet dinh giao dich
+Model 4 | Benchmark outperformance | Outperform probability | Tim co phieu co kha nang vuot benchmark
+Model 5 | Risk alert | Risk probability, risk label | Canh bao rui ro
+
+Visual nen co:
+1. Table: so sanh cac model
+2. Text box: ket luan kien truc
+3. Text box: diem manh cua du an
+4. Text box: huong phat trien
+
+Noi dung ket luan goi y:
+- Diem manh:
+  + Co pipeline du lieu tu raw -> clean -> features -> mart.
+  + Co ClickHouse lam data warehouse.
+  + Co nhieu model ML phuc vu nhieu bai toan khac nhau.
+  + Co Streamlit de demo tuong tac.
+  + Co Power BI de bao cao va phan tich.
+
+- Huong phat trien:
+  + Tu dong refresh Power BI.
+  + Them model explainability SHAP.
+  + Them portfolio simulation.
+  + Them alert qua email/Telegram.
+  + Cai tien feature theo tin tuc/vi mo.
+
+Checklist:
+[ ] Page nay nhin giong trang ket luan.
+[ ] Noi duoc vai tro tung model.
+[ ] Khong lap lai qua nhieu chart cua cac page truoc.
+
+
+QUY TRINH LAM FILE TEMPLATE CHO CA NHOM
+=======================================
+Day la phan ban can lam de ho tro moi nguoi.
+
+Buoc 1: Tao file Power BI moi
+-----------------------------
+- Mo Power BI Desktop.
+- Get Data -> ClickHouse.
+- Nhap host, port, database.
+- Dang nhap bang user/password tu .env, nhung khong ghi password vao tai lieu.
+- Chon DirectQuery hoac Import.
+- Load cac bang can dung.
+
+
+Buoc 2: Tao page trong
+----------------------
+Tao san 9 page:
+
+01_Tong_quan_he_thong
+02_Du_lieu_co_phieu
+03_Model1_Gia_ExpectedReturn
+04_Model2_FutureReturn
+05_Model3_TradingSignals
+06_Model4_Outperformance
+07_Model5_RiskAlerts
+08_Audit_Pipeline
+09_Tong_hop_so_sanh
+
+Moi page dat san 1 title text box o tren cung.
+
+
+Buoc 3: Tao measure dung chung
+------------------------------
+Tao cac measure o muc "CAC MEASURE DUNG CHUNG NEN TAO".
+Neu measure nao loi do thieu bang/cot thi bo qua, khong sao.
+
+
+Buoc 4: Luu file template
+-------------------------
+Luu file thanh:
+powerbi_template.pbix
+
+Gui file nay cho tung thanh vien.
+
+
+Buoc 5: Thanh vien lam page cua minh
+------------------------------------
+Moi nguoi:
+- Mo powerbi_template.pbix.
+- Chi sua page minh duoc giao.
+- Khong xoa page cua nguoi khac.
+- Khong xoa bang.
+- Khong doi ten measure dung chung.
+- Lam xong Save As thanh ten rieng:
+
+powerbi_page_01_tong_quan_TenNguoi.pbix
+powerbi_page_02_du_lieu_TenNguoi.pbix
+powerbi_page_03_model1_TenNguoi.pbix
+
+
+Buoc 6: Gop file
+----------------
+Cach gop an toan:
+1. Mo file cua thanh vien.
+2. Vao page can gop.
+3. Bam Ctrl + A de chon tat ca visual.
+4. Bam Ctrl + C.
+5. Mo file final cua truong nhom.
+6. Tao page tuong ung.
+7. Bam Ctrl + V.
+8. Can chinh lai kich thuoc neu bi lech.
+
+Luu file cuoi:
+stock_powerbi_report_final.pbix
+
+
+Buoc 7: Xuat PDF
+----------------
+File -> Export -> PDF
+
+Ten file:
+stock_powerbi_report_final.pdf
+
+Truoc khi export:
+- Kiem tra tung page.
+- Refresh lai du lieu.
+- Kiem tra chart co bi trong khong.
+- Kiem tra text co bi cat khong.
+
+
+NGUYEN TAC TRINH BAY CHO NGUOI MOI
+==================================
+1. Moi page chi nen co 4 den 7 visual.
+   Qua nhieu chart se roi mat.
+
+2. Moi chart phai co title ro rang.
+   Vi du:
+   - "Gia dong cua theo thoi gian"
+   - "Top co phieu expected return cao"
+   - "Phan bo tin hieu BUY/HOLD/SELL"
+   - "Top co phieu rui ro cao"
+
+3. Dung slicer de loc:
+   - symbol
+   - trading_date / prediction_date
+   - sector neu co
+
+4. Format probability va accuracy thanh %.
+
+5. Khong dung "Sum of close" khi xem nhieu symbol.
+   Nen dung Average Close hoac bat buoc chon 1 symbol.
+
+6. Bang nao khong co thi bo qua.
+   Khong can lam dung 100% tat ca visual trong huong dan.
+   Muc tieu la moi page co noi dung ro, dung du lieu that, va thuyet trinh duoc.
+
+
+CHECKLIST CUOI CUNG TRUOC KHI NOP
+=================================
+[ ] File .pbix mo duoc.
+[ ] File PDF export duoc.
+[ ] Khong co password, token, .env trong report.
+[ ] Page 01 noi duoc kien truc toan he thong.
+[ ] Page 02 phan tich du lieu gia/features.
+[ ] Page 03 co Model 1.
+[ ] Page 04 co Model 2.
+[ ] Page 05 co Model 3.
+[ ] Page 06 co Model 4.
+[ ] Page 07 co Model 5.
+[ ] Page 08 co audit/pipeline neu lam.
+[ ] Page 09 tong hop vai tro cac model.
+[ ] Cac chart co title ro rang.
+[ ] Cac slicer hoat dong.
+[ ] Cac gia tri % format dung.
+[ ] Khong co chart bi trong.
+[ ] Ca nhom biet page minh lam de thuyet trinh.
+
+
+LICH LAM GOI Y
+==============
+Neu lam gap trong 1 buoi:
+- 20 phut: truong nhom tao template.
+- 90 phut: moi nguoi lam page duoc giao.
+- 30 phut: gop file.
+- 30 phut: sua format, title, mau sac.
+- 15 phut: export PDF.
+
+Tong thoi gian neu nhom 4-6 nguoi lam song song:
+- Ban nhanh: 2 den 3 gio.
+- Ban dep vua du de bao cao: 3 den 5 gio.
+- Ban rat dep, can chinh ky: 1 ngay.
+
+
+CAU TRA LOI KHI THAY/CO HOI
+===========================
+1. "Tai sao da co Streamlit con lam Power BI?"
+Tra loi:
+"Streamlit dung de demo ung dung va model prediction. Power BI dung de bao cao BI, xem tong quan, loc du lieu, chia page theo model va xuat PDF/PPT cho nguoi dung khong can chay code."
+
+2. "Power BI co ket noi truc tiep database khong?"
+Tra loi:
+"Co. Power BI ket noi ClickHouse thong qua connector/ODBC. Cac bang mart trong ClickHouse duoc dung lam nguon du lieu cho dashboard."
+
+3. "Vi sao chia nhieu model?"
+Tra loi:
+"Moi model giai quyet mot bai toan khac nhau: du bao gia, du doan return, sinh tin hieu giao dich, du doan outperform benchmark va canh bao rui ro. Power BI giup dat cac ket qua nay vao cung mot bao cao tong hop."
+
+4. "Diem manh cua thiet ke du lieu la gi?"
+Tra loi:
+"Du lieu duoc tach theo pipeline: raw/clean/features/mart/audit. Cac bang mart da tong hop san nen Power BI chi can doc va truc quan hoa, khong phai xu ly logic phuc tap trong dashboard."

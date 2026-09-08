@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import html
 import importlib.util
 import os
 import sys
@@ -203,6 +204,51 @@ def sql_string(value) -> str:
 def display_error(message: str, exc: Exception) -> None:
     st.error(message)
     st.caption(str(exc))
+
+
+GROQ_SYSTEM_PROMPT = """
+Bạn là chatbot AI hỗ trợ dự án Stock Prediction System của sinh viên.
+Trả lời bằng tiếng Việt, thân thiện, rõ ràng, dễ hiểu.
+
+Bạn có thể giải thích kiến thức chứng khoán phổ thông như open, high, low,
+close, volume, nến, MA, volatility, drawdown, precision, recall, ROC-AUC.
+
+Không đưa ra khuyến nghị mua/bán cổ phiếu. Nếu người dùng hỏi về quyết định
+đầu tư, hãy nhắc rằng thông tin chỉ phục vụ học tập và phân tích, không phải
+lời khuyên đầu tư.
+
+Nếu người dùng hỏi dữ liệu nội bộ cụ thể nhưng bạn không được cung cấp dữ liệu
+trong câu hỏi, hãy nói rõ rằng bạn chưa có quyền tra cứu dữ liệu đó trong phiên
+chat này, thay vì tự bịa số liệu.
+""".strip()
+
+
+def get_groq_api_key() -> str:
+    return os.getenv("GROQ_API_KEY") or os.getenv("GROG_API_KEY") or ""
+
+
+def get_groq_model() -> str:
+    return os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+
+def call_groq_chat(messages: list[dict[str, str]], model_name: str | None = None) -> str:
+    api_key = get_groq_api_key()
+    if not api_key:
+        return "Chưa cấu hình GROQ_API_KEY trong file .env."
+
+    try:
+        from groq import Groq
+    except ImportError:
+        return "Thiếu thư viện groq. Cài bằng: .\\.venv\\Scripts\\python.exe -m pip install -U groq"
+
+    client = Groq(api_key=api_key)
+    chat_completion = client.chat.completions.create(
+        model=model_name or get_groq_model(),
+        messages=messages,
+        temperature=0.3,
+        max_tokens=900,
+    )
+    return chat_completion.choices[0].message.content or "Mình chưa tạo được câu trả lời."
 
 
 @st.cache_resource
@@ -457,6 +503,17 @@ def format_insight_value(column: str, value) -> str:
     return f"{numeric_value:,.4f}"
 
 
+def is_date_like_insight_column(column: str) -> bool:
+    lower_column = column.lower()
+    return (
+        lower_column == "date"
+        or lower_column.endswith("_date")
+        or lower_column.endswith("_at")
+        or "datetime" in lower_column
+        or "timestamp" in lower_column
+    )
+
+
 def render_mart_insights(
     table_full_name: str,
     mart_df: pd.DataFrame,
@@ -527,6 +584,33 @@ def render_mart_insights(
         summary = ", ".join(f"{idx}: {int(value)}" for idx, value in counts.items())
         insights.append(f"Phân bố `{column}` nổi bật: {summary}.")
 
+    date_summary_rows = []
+    date_columns = [
+        column
+        for column in mart_df.columns
+        if is_date_like_insight_column(column)
+    ]
+    if date_col and date_col in mart_df.columns and date_col not in date_columns:
+        date_columns.insert(0, date_col)
+
+    for column in date_columns[:4]:
+        parsed_dates = pd.to_datetime(mart_df[column], errors="coerce").dropna()
+        if parsed_dates.empty:
+            continue
+        min_col_date = parsed_dates.min()
+        max_col_date = parsed_dates.max()
+        date_summary_rows.append(
+            {
+                "metric": column,
+                "min": min_col_date.strftime("%Y-%m-%d"),
+                "max": max_col_date.strftime("%Y-%m-%d"),
+            }
+        )
+        insights.append(
+            f"`{column}` từ {min_col_date.strftime('%Y-%m-%d')} "
+            f"đến {max_col_date.strftime('%Y-%m-%d')}."
+        )
+
     numeric_priority = [
         "risk_probability",
         "outperform_probability",
@@ -544,10 +628,10 @@ def render_mart_insights(
     ]
     numeric_columns = []
     for column in numeric_priority:
-        if column in mart_df.columns:
+        if column in mart_df.columns and not is_date_like_insight_column(column):
             numeric_columns.append(column)
     for column in mart_df.columns:
-        if column in numeric_columns:
+        if column in numeric_columns or is_date_like_insight_column(column):
             continue
         numeric = pd.to_numeric(mart_df[column], errors="coerce")
         if numeric.notna().sum() > 0:
@@ -597,6 +681,13 @@ def render_mart_insights(
 
     for item in insights[:10]:
         st.markdown(f"- {item}")
+
+    if date_summary_rows:
+        st.dataframe(
+            pd.DataFrame(date_summary_rows),
+            use_container_width=True,
+            hide_index=True,
+        )
 
     if numeric_summary_rows:
         st.dataframe(
@@ -1296,27 +1387,8 @@ def render_data_mart_page() -> None:
 
 
 def render_model1_prediction() -> None:
-    os.environ["MODEL1_DASHBOARD_EMBEDDED"] = "1"
-    add_model_path(MODEL1_DIR)
-
-    try:
-        dashboard_model1 = load_module_from_path(
-            "embedded_dashboard_model1",
-            MODEL1_DIR / "test.py",
-        )
-    except Exception as exc:
-        display_error("Không tải được Streamlit Model 1.", exc)
-        st.caption(f"Kiểm tra file: {MODEL1_DIR / 'test.py'}")
-        return
-
-    try:
-        dashboard_model1.main()
-    except Exception as exc:
-        display_error("Không render được Streamlit Model 1.", exc)
-    return
-
     st.subheader("Model 1 - Dự đoán return 5 phiên và suy ra giá")
-    st.caption("Logic dựa trên models/model1/test.py.")
+    st.caption("Du doan live tu model da luu va bang features_all trong ClickHouse.")
 
     try:
         symbols = get_feature_symbols()
@@ -1839,6 +1911,363 @@ def render_data_quality_page() -> None:
         st.info("Chưa tìm thấy data/khaosatdata/khaosat_summary.txt")
 
 
+def ensure_groq_chat_messages() -> None:
+    if "groq_chat_messages" not in st.session_state:
+        st.session_state.groq_chat_messages = [
+            {
+                "role": "assistant",
+                "content": (
+                    "Xin chào, mình là chatbot AI hỗ trợ dự án Stock Prediction System. "
+                    "Bạn có thể hỏi mình về thuật ngữ chứng khoán, ML metrics, hoặc cách giải thích mô hình."
+                ),
+            }
+        ]
+
+
+def reset_groq_chat_messages() -> None:
+    st.session_state.groq_chat_messages = [
+        {
+            "role": "assistant",
+            "content": "Đã xoá lịch sử. Bạn muốn hỏi gì tiếp nào?",
+        }
+    ]
+
+
+def submit_groq_chat_message(user_prompt: str, model_name: str) -> None:
+    prompt = user_prompt.strip()
+    if not prompt:
+        return
+
+    st.session_state.groq_chat_messages.append(
+        {"role": "user", "content": prompt}
+    )
+    history = [
+        {"role": "system", "content": GROQ_SYSTEM_PROMPT},
+        *st.session_state.groq_chat_messages[-10:],
+    ]
+    try:
+        answer = call_groq_chat(history, model_name=model_name)
+    except Exception as exc:
+        answer = f"Không gọi được Groq API: {exc}"
+
+    st.session_state.groq_chat_messages.append(
+        {"role": "assistant", "content": answer}
+    )
+
+
+def render_groq_chat_status() -> str:
+    model_name = get_groq_model()
+    key_ready = bool(get_groq_api_key())
+
+    c1, c2, c3 = st.columns([1.2, 1.2, 1])
+    c1.metric("Provider", "Groq")
+    c2.metric("Model", model_name)
+    c3.metric("API key", "Đã cấu hình" if key_ready else "Thiếu")
+
+    if not key_ready:
+        st.warning("Thêm GROQ_API_KEY vào file .env rồi restart Streamlit.")
+
+    return model_name
+
+
+def render_groq_chat_messages() -> None:
+    for message in st.session_state.groq_chat_messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+
+@st.dialog("Chatbot AI", width="large")
+def render_groq_chatbot_dialog() -> None:
+    ensure_groq_chat_messages()
+    st.caption(
+        "Chatbot Groq dùng Python backend nên API key không bị lộ. "
+        "Bản này không đọc dữ liệu nội bộ/RAG."
+    )
+    model_name = render_groq_chat_status()
+
+    with st.form("groq_popup_chat_form", clear_on_submit=True):
+        user_prompt = st.text_input(
+            "Nhập câu hỏi",
+            placeholder="Ví dụ: close là gì, nến chứng khoán là gì?",
+        )
+        submitted = st.form_submit_button("Gửi", type="primary")
+
+    if submitted and user_prompt.strip():
+        with st.spinner("Groq đang trả lời..."):
+            submit_groq_chat_message(user_prompt, model_name)
+
+    col_clear, col_hint = st.columns([1, 2])
+    with col_clear:
+        if st.button("Xoá lịch sử", key="clear_groq_dialog_chat"):
+            reset_groq_chat_messages()
+            st.rerun()
+    with col_hint:
+        st.caption("Gợi ý: close là gì? | precision và recall khác nhau thế nào?")
+
+    render_groq_chat_messages()
+
+
+def render_global_groq_chatbot_launcher() -> None:
+    ensure_groq_chat_messages()
+    if "groq_chat_open" not in st.session_state:
+        st.session_state.groq_chat_open = False
+
+    st.markdown(
+        """
+        <style>
+        .st-key-groq_chatbot_launcher,
+        div[data-testid="stElementContainer"]:has(.st-key-groq_chatbot_launcher) {
+            position: fixed !important;
+            left: auto !important;
+            right: 24px !important;
+            bottom: 24px !important;
+            width: 72px !important;
+            max-width: 72px !important;
+            z-index: 1000000 !important;
+            display: flex !important;
+            justify-content: flex-end !important;
+            pointer-events: auto !important;
+        }
+        .st-key-groq_chatbot_launcher button {
+            width: 64px;
+            height: 64px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.4);
+            background: #0819c8;
+            color: #ffffff;
+            font-size: 24px;
+            box-shadow: 0 18px 44px rgba(8,25,200,0.36);
+        }
+        .st-key-groq_chatbot_launcher button:hover {
+            background: #0613a8;
+            border-color: rgba(255,255,255,0.7);
+        }
+        .st-key-groq_chatbot_panel,
+        div[data-testid="stElementContainer"]:has(.st-key-groq_chatbot_panel) {
+            position: fixed !important;
+            left: auto !important;
+            right: 24px !important;
+            bottom: 100px !important;
+            width: min(420px, calc(100vw - 32px)) !important;
+            max-height: min(72vh, 650px);
+            overflow-y: auto;
+            z-index: 999999 !important;
+            background: #eaf2ff;
+            border: 1px solid #c6d8ff;
+            border-radius: 10px;
+            box-shadow: 0 24px 68px rgba(15,23,42,0.34);
+            padding: 16px 16px 14px 16px;
+        }
+        .st-key-groq_chatbot_panel [data-testid="stVerticalBlock"] {
+            gap: 0.55rem;
+        }
+        .groq-chat-title {
+            font-size: 28px;
+            line-height: 1.05;
+            font-weight: 800;
+            color: #001eb8;
+            margin: 0;
+        }
+        .groq-chat-status {
+            color: #001eb8;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+        .groq-chat-divider {
+            height: 1px;
+            background: #c9dcff;
+            margin: 8px -16px 10px -16px;
+        }
+        .groq-message-row {
+            display: flex;
+            margin: 8px 0;
+        }
+        .groq-message-row.user {
+            justify-content: flex-end;
+        }
+        .groq-message-row.assistant {
+            justify-content: flex-start;
+        }
+        .groq-message-bubble {
+            max-width: 86%;
+            border-radius: 11px;
+            padding: 10px 13px;
+            font-size: 14px;
+            line-height: 1.45;
+            border: 1px solid #cfe0ff;
+            word-break: break-word;
+        }
+        .groq-message-row.assistant .groq-message-bubble {
+            background: #fffdf1;
+            color: #00166d;
+        }
+        .groq-message-row.user .groq-message-bubble {
+            background: #2f67e8;
+            color: #ffffff;
+            border-color: #2f67e8;
+        }
+        .groq-chat-hint {
+            color: #25447a;
+            font-size: 12px;
+            margin-top: 2px;
+        }
+        .st-key-groq_chatbot_panel button {
+            border-radius: 6px;
+            border-color: #001eb8;
+            color: #001eb8;
+            font-weight: 700;
+        }
+        .st-key-groq_chatbot_panel div[data-testid="stForm"] {
+            background: #0819c8;
+            border-radius: 12px;
+            padding: 12px;
+            border: none;
+        }
+        .st-key-groq_chatbot_panel div[data-testid="stForm"] label {
+            color: #ffffff;
+        }
+        @media (max-width: 640px) {
+            .st-key-groq_chatbot_panel,
+            div[data-testid="stElementContainer"]:has(.st-key-groq_chatbot_panel) {
+                right: 12px !important;
+                bottom: 88px !important;
+                width: calc(100vw - 24px) !important;
+            }
+            .st-key-groq_chatbot_launcher,
+            div[data-testid="stElementContainer"]:has(.st-key-groq_chatbot_launcher) {
+                right: 16px !important;
+                bottom: 16px !important;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    model_name = get_groq_model()
+
+    if st.session_state.groq_chat_open:
+        with st.container(key="groq_chatbot_panel"):
+            title_col, close_col = st.columns([0.82, 0.18], vertical_alignment="center")
+            with title_col:
+                st.markdown(
+                    '<div class="groq-chat-title">Stock Assistant</div>'
+                    '<div class="groq-chat-status">Trực tuyến</div>',
+                    unsafe_allow_html=True,
+                )
+            with close_col:
+                if st.button("×", key="groq_chatbot_close", help="Đóng chatbot"):
+                    st.session_state.groq_chat_open = False
+                    st.rerun()
+
+            st.markdown('<div class="groq-chat-divider"></div>', unsafe_allow_html=True)
+
+            if not get_groq_api_key():
+                st.warning("Thiếu GROQ_API_KEY trong .env. Thêm key rồi restart Streamlit.")
+
+            for message in st.session_state.groq_chat_messages[-8:]:
+                role = message.get("role", "assistant")
+                content = html.escape(str(message.get("content", ""))).replace("\n", "<br>")
+                row_role = "user" if role == "user" else "assistant"
+                st.markdown(
+                    f"""
+                    <div class="groq-message-row {row_role}">
+                        <div class="groq-message-bubble">{content}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+            st.caption("Gợi ý nhanh")
+            quick_prompts = [
+                ("Close là gì?", "Giá close trong chứng khoán là gì?"),
+                ("Nến là gì?", "Nến chứng khoán là gì? Giải thích ngắn gọn."),
+                ("Precision/Recall", "Precision và recall khác nhau thế nào trong mô hình ML?"),
+                ("ROC-AUC", "ROC-AUC là gì và dùng để đánh giá mô hình thế nào?"),
+            ]
+            q_cols = st.columns(2)
+            for idx, (label, prompt) in enumerate(quick_prompts):
+                with q_cols[idx % 2]:
+                    if st.button(label, key=f"groq_quick_prompt_{idx}", use_container_width=True):
+                        with st.spinner("Groq đang trả lời..."):
+                            submit_groq_chat_message(prompt, model_name)
+                        st.rerun()
+
+            with st.form("groq_floating_chat_form", clear_on_submit=True):
+                user_prompt = st.text_input(
+                    "Nhập tin nhắn dưới 1.000 ký tự nhé!",
+                    max_chars=1000,
+                    placeholder="Ví dụ: ACB là mã của công ty nào?",
+                )
+                send_col, clear_col = st.columns([1, 1])
+                with send_col:
+                    submitted = st.form_submit_button("Gửi", type="primary", use_container_width=True)
+                with clear_col:
+                    clear_chat = st.form_submit_button("Xóa chat", use_container_width=True)
+
+            if clear_chat:
+                reset_groq_chat_messages()
+                st.rerun()
+            if submitted and user_prompt.strip():
+                with st.spinner("Groq đang trả lời..."):
+                    submit_groq_chat_message(user_prompt, model_name)
+                st.rerun()
+
+            st.markdown(
+                '<div class="groq-chat-hint">Chatbot dùng Groq API backend. '
+                'Không nhập mật khẩu, API key hoặc dữ liệu quá nhạy cảm.</div>',
+                unsafe_allow_html=True,
+            )
+
+    with st.container(key="groq_chatbot_launcher"):
+        launcher_label = "×" if st.session_state.groq_chat_open else "💬"
+        if st.button(launcher_label, key="groq_chatbot_toggle", help="Mở chatbot AI"):
+            st.session_state.groq_chat_open = not st.session_state.groq_chat_open
+            st.rerun()
+
+
+def render_groq_chatbot_page() -> None:
+    st.header("Chatbot AI")
+    st.caption(
+        "Chatbot dùng Groq API để trò chuyện và giải thích kiến thức chứng khoán. "
+        "Bản này không đọc dữ liệu nội bộ/RAG."
+    )
+
+    model_name = render_groq_chat_status()
+
+    st.info(
+        "Gợi ý hỏi: `close là gì?`, `nến chứng khoán là gì?`, "
+        "`precision và recall khác nhau thế nào?`, `xin chào`."
+    )
+
+    ensure_groq_chat_messages()
+
+    if st.button("Xoá lịch sử chat", type="secondary"):
+        reset_groq_chat_messages()
+        st.rerun()
+
+    render_groq_chat_messages()
+
+    user_prompt = st.chat_input("Nhập câu hỏi cho chatbot...")
+    if not user_prompt:
+        return
+
+    st.session_state.groq_chat_messages.append({"role": "user", "content": user_prompt})
+    with st.chat_message("user"):
+        st.markdown(user_prompt)
+
+    with st.chat_message("assistant"):
+        with st.spinner("Groq đang trả lời..."):
+            history = [
+                {"role": "system", "content": GROQ_SYSTEM_PROMPT},
+                *st.session_state.groq_chat_messages[-10:],
+            ]
+            answer = call_groq_chat(history, model_name=model_name)
+            st.markdown(answer)
+
+    st.session_state.groq_chat_messages.append({"role": "assistant", "content": answer})
+
+
 def main() -> None:
     render_header()
 
@@ -1871,8 +2300,10 @@ def main() -> None:
         render_prediction_models_page()
     elif page.startswith("6."):
         render_insight_page()
-    else:
+    elif page.startswith("7."):
         render_data_quality_page()
+
+    render_global_groq_chatbot_launcher()
 
 
 if __name__ == "__main__":
